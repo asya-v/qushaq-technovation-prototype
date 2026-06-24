@@ -1,0 +1,4393 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Qushaq — support for parents</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* ─── TOKENS ─── */
+:root {
+  --teal:      #1F9070;
+  --teal-2:    #2DAF88;
+  --teal-bg:   #EBF8F3;
+  --amber:     #D97706;
+  --amber-2:   #F59E0B;
+  --amber-bg:  #FFFBEB;
+  --red:       #C0392B;
+  --red-2:     #DC2626;
+  --red-bg:    #FEF2F2;
+  --blue:      #2563EB;
+  --blue-bg:   #EFF6FF;
+  --purple:    #5B21B6;
+  --purple-bg: #F5F3FF;
+  --orange:    #EA580C;
+  --orange-bg: #FFF7ED;
+  --ink:       #0F172A;
+  --ink-2:     #334155;
+  --ink-3:     #64748B;
+  --ink-4:     #94A3B8;
+  --line:      #E2E8F0;
+  --line-2:    #F1F5F9;
+  --surface:   #FFFFFF;
+  --bg:        #F8FAFC;
+  --r-sm: 8px; --r-md: 12px; --r-lg: 16px; --r-xl: 20px;
+  --sh-sm: 0 1px 3px rgba(15,23,42,.06), 0 1px 2px rgba(15,23,42,.04);
+  --sh-md: 0 4px 12px rgba(15,23,42,.08), 0 2px 4px rgba(15,23,42,.04);
+  --f: 'Inter', -apple-system, sans-serif;
+  /* ── Episode category color tokens ── */
+  /* СЕНСОРНОЕ (sound + light) */
+  --cat-сенс:        #6D4FCF;
+  --cat-сенс-bg:     #F3EEFF;
+  --cat-сенс-border: #D0BCFD;
+  /* СРЕДА (people + environment) */
+  --cat-environment:        #C2762A;
+  --cat-environment-bg:     #FFF4E5;
+  --cat-environment-border: #F8CDAA;
+  /* ПЕРЕХОД (transitions) */
+  --cat-transition:        #2B8CC4;
+  --cat-transition-bg:     #EAF5FF;
+  --cat-transition-border: #A8D8F5;
+  /* СОСТОЯНИЕ (fatigue/sleep) */
+  --cat-сост:        #64748B;
+  --cat-сост-bg:     #F1F5F9;
+  --cat-сост-border: #CBD5E1;
+  /* НЕ ОПРЕДЕЛЕНО (fallback) */
+  --cat-none:        #94A3B8;
+  --cat-none-bg:     #F8FAFC;
+  --cat-none-border: #E2E8F0;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+/* ─── PAGE LAYOUT ─── */
+body {
+  margin: 0;
+  background: #ffffff;
+  font-family: var(--f);
+}
+
+.outer {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  background: #ffffff;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* ─── DEMO NAV ─── */
+.demo-nav {
+  display: flex; gap: 3px;
+  background: rgba(255,255,255,.95); backdrop-filter: blur(12px);
+  border-radius: 14px; padding: 5px; box-shadow: var(--sh-md);
+  flex-wrap: wrap; justify-content: center;
+}
+.demo-nav button {
+  padding: 7px 14px; border: none; background: transparent;
+  border-radius: 10px; font-family: var(--f); font-size: 12.5px;
+  font-weight: 600; color: var(--ink-3); cursor: pointer;
+  transition: all .18s; white-space: nowrap;
+}
+.demo-nav button.on { background: var(--teal); color: #fff; box-shadow: 0 2px 8px rgba(31,144,112,.3); }
+.demo-nav button:hover:not(.on) { background: var(--teal-bg); color: var(--teal); }
+
+/* ─── PHONE SHELL ─── */
+.phone {
+  width: 375px;
+  height: 812px;
+  background: #fff;
+  border-radius: 24px;
+  overflow: hidden;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.15);
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+.notch { display: none; }
+
+/* ─── SPLASH ─── */
+.splash {
+  position: absolute; inset: 0; z-index: 300;
+  background: linear-gradient(160deg, #0D6450 0%, #1F9070 55%, #2DAF88 100%);
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 16px;
+  transition: opacity .6s ease, visibility .6s ease;
+}
+.splash.hidden { opacity: 0; visibility: hidden; pointer-events: none; }
+.splash-icon {
+  width: 76px; height: 76px; border-radius: 24px;
+  background: rgba(255,255,255,.18); border: 1.5px solid rgba(255,255,255,.3);
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 10px 40px rgba(0,0,0,.22);
+}
+.splash-icon svg { width: 40px; height: 40px; }
+.splash-name { font-size: 34px; font-weight: 700; color: #fff; letter-spacing: -.03em; }
+.splash-sub  { font-size: 15px; font-weight: 500; color: rgba(255,255,255,.7); }
+.splash-dot  { width: 6px; height: 6px; border-radius: 50%; background: rgba(255,255,255,.5); animation: pulse 1.4s ease-in-out infinite; }
+@keyframes pulse { 0%,100% { opacity:.4; transform:scale(.8); } 50% { opacity:1; transform:scale(1.2); } }
+
+.edit-child-btn {
+  margin-top: 14px; padding: 9px 20px;
+  background: transparent; border: 1.5px solid var(--line);
+  border-radius: 20px; font-family: var(--f); font-size: 12.5px;
+  font-weight: 600; color: var(--ink-3); cursor: pointer;
+  transition: all .15s;
+}
+.edit-child-btn:hover { border-color: var(--teal); color: var(--teal); background: var(--teal-bg); }
+
+/* ─── ONBOARDING SCREEN ─── */
+.onboard {
+  position: absolute; inset: 0; z-index: 250;
+  background: #fff; display: none; flex-direction: column;
+  overflow-y: auto;
+}
+.onboard.active { display: flex; }
+.onboard-header {
+  padding: 28px 24px 0;
+  display: flex; flex-direction: column; align-items: center; gap: 10px;
+}
+.onboard-icon {
+  width: 60px; height: 60px; border-radius: 20px;
+  background: linear-gradient(135deg, var(--teal-2), var(--teal));
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 6px 20px rgba(31,144,112,.28);
+}
+.onboard-icon svg { width: 32px; height: 32px; }
+.onboard-title { font-size: 22px; font-weight: 700; color: var(--ink); letter-spacing: -.02em; text-align: center; margin-top: 4px; }
+.onboard-sub   { font-size: 13.5px; font-weight: 500; color: var(--ink-3); text-align: center; line-height: 1.5; }
+.onboard-body  { padding: 24px 22px 32px; display: flex; flex-direction: column; gap: 16px; }
+.ob-field      { display: flex; flex-direction: column; gap: 6px; }
+.ob-label      { font-size: 12px; font-weight: 700; color: var(--ink-3); letter-spacing: .05em; text-transform: uppercase; }
+.ob-input {
+  padding: 12px 14px; border: 1.5px solid var(--line);
+  border-radius: var(--r-md); font-family: var(--f); font-size: 15px;
+  color: var(--ink); background: var(--surface); outline: none;
+  transition: border-color .15s;
+}
+.ob-input:focus { border-color: var(--teal-2); }
+.ob-row { display: flex; gap: 10px; }
+.ob-row .ob-field { flex: 1; }
+.ob-gender-row { display: flex; gap: 8px; }
+.ob-gender-btn {
+  flex: 1; padding: 11px 8px; border: 1.5px solid var(--line);
+  border-radius: var(--r-md); background: var(--surface);
+  font-family: var(--f); font-size: 13px; font-weight: 600;
+  color: var(--ink-3); cursor: pointer; text-align: center;
+  transition: all .15s;
+}
+.ob-gender-btn.on { border-color: var(--teal); background: var(--teal-bg); color: var(--teal); }
+.ob-diag-wrap { display: flex; flex-wrap: wrap; gap: 8px; }
+.ob-diag-chip {
+  padding: 7px 13px; border: 1.5px solid var(--line);
+  border-radius: 20px; font-family: var(--f); font-size: 12.5px;
+  font-weight: 600; color: var(--ink-3); cursor: pointer; transition: all .15s;
+  background: var(--surface);
+}
+.ob-diag-chip.on { border-color: var(--teal); background: var(--teal-bg); color: var(--teal); }
+.ob-note { font-size: 11.5px; color: var(--ink-4); font-weight: 500; line-height: 1.5; }
+.ob-btn {
+  width: 100%; padding: 15px; background: var(--teal);
+  border: none; border-radius: var(--r-lg); font-family: var(--f);
+  font-size: 15px; font-weight: 700; color: #fff; cursor: pointer;
+  box-shadow: 0 4px 16px rgba(31,144,112,.3); transition: background .15s;
+  margin-top: 4px;
+}
+.ob-btn:hover { background: var(--teal-2); }
+
+/* ─── SCREENS ─── */
+.screen { display: none; flex-direction: column; flex: 1; overflow: hidden; padding-top: 0; }
+.screen.active { display: flex; }
+
+/* ─── STATUS BAR ─── */
+.sbar {
+  height: 18px; padding: 0 18px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.sbar-time { font-size: 12px; font-weight: 700; color: var(--ink); }
+.sbar-icons { display: flex; gap: 5px; align-items: center; }
+.sbar-icons svg { width: 14px; height: 14px; }
+
+/* ─── BOTTOM NAV ─── */
+.nav {
+  display: flex; justify-content: space-around;
+  padding: 8px 0 16px; border-top: 1px solid var(--line);
+  background: rgba(255,255,255,.98); backdrop-filter: blur(10px); flex-shrink: 0;
+}
+.ni {
+  display: flex; flex-direction: column; align-items: center;
+  gap: 3px; cursor: pointer; padding: 3px 11px;
+  border-radius: 10px; transition: background .15s;
+  -webkit-tap-highlight-color: transparent; min-width: 0;
+}
+.ni:active { background: var(--teal-bg); }
+.ni svg { width: 20px; height: 20px; stroke: var(--ink-4); transition: stroke .15s; flex-shrink: 0; }
+.ni-label { font-size: 9.5px; font-weight: 600; color: var(--ink-4); transition: color .15s; white-space: nowrap; }
+.ni.on svg { stroke: var(--teal); }
+.ni.on .ni-label { color: var(--teal); }
+.ni-pip { width: 4px; height: 4px; border-radius: 50%; background: var(--teal); display: none; }
+.ni.on .ni-pip { display: block; }
+
+/* ─── SHARED ─── */
+.scroll-y { flex: 1; overflow-y: auto; }
+.scroll-y::-webkit-scrollbar { display: none; }
+.sec-label {
+  font-size: 11.5px; font-weight: 700; color: var(--ink-3);
+  letter-spacing: .06em; text-transform: uppercase; margin: 20px 0 9px;
+}
+.screen-hdr {
+  padding: 13px 18px 14px; background: var(--surface);
+  border-bottom: 1px solid var(--line); flex-shrink: 0;
+}
+.screen-hdr h2 { font-size: 18px; font-weight: 700; color: var(--ink); letter-spacing: -.01em; }
+.screen-hdr p  { font-size: 12.5px; font-weight: 500; color: var(--ink-3); margin-top: 3px; }
+
+/* ══════════════════════════════════════════
+   CRISIS OVERLAY
+══════════════════════════════════════════ */
+.crisis-overlay {
+  position: absolute; inset: 0; z-index: 200; background: #FFF9F9;
+  display: none; flex-direction: column; padding-top: 32px;
+}
+.crisis-overlay.open { display: flex; }
+.crisis-hdr {
+  background: var(--red-2); padding: 13px 18px 15px;
+  display: flex; align-items: center; justify-content: space-between; flex-shrink: 0;
+}
+.crisis-hdr-title { font-size: 15px; font-weight: 700; color: #fff; display: flex; align-items: center; gap: 8px; }
+.crisis-hdr-title svg { width: 18px; height: 18px; stroke: #fff; }
+.crisis-close-btn {
+  width: 32px; height: 32px; border-radius: 50%;
+  background: rgba(255,255,255,.2); border: 1.5px solid rgba(255,255,255,.4);
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  font-size: 16px; font-weight: 600; color: #fff; transition: background .15s;
+}
+.crisis-close-btn:hover { background: rgba(255,255,255,.3); }
+.crisis-body { flex: 1; overflow-y: auto; padding: 16px 16px 24px; }
+.crisis-body::-webkit-scrollbar { display: none; }
+.crisis-subtitle { font-size: 11.5px; font-weight: 700; color: var(--ink-3); letter-spacing: .06em; text-transform: uppercase; margin-bottom: 12px; }
+.crisis-step {
+  display: flex; gap: 12px; align-items: flex-start;
+  background: var(--surface); border: 1px solid var(--line);
+  border-radius: var(--r-lg); padding: 13px 14px; margin-bottom: 9px; box-shadow: var(--sh-sm);
+}
+.crisis-num {
+  width: 32px; height: 32px; border-radius: 50%;
+  background: var(--red-2); color: #fff; font-size: 14px; font-weight: 700;
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+.crisis-step-title { font-size: 14px; font-weight: 700; color: var(--ink); margin-bottom: 4px; }
+.crisis-step-desc  { font-size: 12.5px; font-weight: 500; color: var(--ink-2); line-height: 1.55; }
+.crisis-note {
+  background: var(--amber-bg); border: 1px solid #FCD34D;
+  border-radius: var(--r-md); padding: 11px 13px; margin-top: 4px;
+  font-size: 12.5px; font-weight: 500; color: #78350F; line-height: 1.55;
+}
+.crisis-log-btn {
+  width: 100%; margin-top: 12px; padding: 13px;
+  background: var(--surface); border: 1.5px solid var(--line);
+  border-radius: var(--r-lg); font-family: var(--f); font-size: 13.5px;
+  font-weight: 600; color: var(--teal); cursor: pointer; text-align: center; transition: background .15s;
+}
+.crisis-log-btn:hover { background: var(--teal-bg); }
+.crisis-gotit-btn {
+  width: 100%; margin-top: 8px; padding: 13px; background: var(--red-2); border: none;
+  border-radius: var(--r-lg); font-family: var(--f); font-size: 13.5px;
+  font-weight: 700; color: #fff; cursor: pointer; text-align: center; transition: background .15s;
+}
+.crisis-gotit-btn:hover { background: #B91C1C; }
+
+/* ══════════════════════════════════════════
+   SCREEN: HOME — REDESIGNED
+══════════════════════════════════════════ */
+.home-body {
+  flex: 1; overflow-y: auto; padding: 0; display: flex; flex-direction: column; background: var(--bg);
+}
+.home-body::-webkit-scrollbar { display: none; }
+
+/* ── Top bar ── */
+.home-topbar {
+  display: flex; align-items: center; gap: 10px;
+  padding: 12px 20px 10px; background: var(--surface); flex-shrink: 0;
+}
+.home-topbar-logo { display: flex; align-items: center; gap: 9px; flex-shrink: 0; }
+.home-topbar-right {
+  display: flex; align-items: center; gap: 8px;
+  margin-left: auto; min-width: 0; flex: 1; justify-content: flex-end;
+}
+.home-topbar-logo-icon {
+  width: 34px; height: 34px; border-radius: 10px;
+  background: linear-gradient(135deg, var(--teal-2), var(--teal));
+  display: flex; align-items: center; justify-content: center;
+}
+.home-topbar-logo-icon svg { width: 19px; height: 19px; }
+.home-topbar-name { font-size: 17px; font-weight: 700; color: var(--ink); letter-spacing: -.02em; }
+.home-topbar-notif {
+  width: 34px; height: 34px; border-radius: 10px; background: var(--bg);
+  display: flex; align-items: center; justify-content: center; cursor: pointer;
+  border: 1px solid var(--line);
+}
+.home-topbar-notif svg { width: 17px; height: 17px; stroke: var(--ink-3); }
+
+.home-topbar-child {
+  display: flex; align-items: center; gap: 6px;
+  background: var(--bg); border: 1px solid var(--line);
+  border-radius: 12px; padding: 5px 8px 5px 6px;
+  cursor: pointer; transition: background .15s;
+  min-width: 0; max-width: 250px; flex: 1;
+}
+.home-topbar-child:hover { background: var(--line-2); }
+.home-topbar-child-copy { min-width: 0; flex: 1; }
+.home-child-ava-sm { font-size: 18px; line-height: 1; flex-shrink: 0; }
+.home-child-name-sm { font-size: 11.5px; font-weight: 700; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.home-child-sub-sm  {
+  font-size: 10px; font-weight: 500; color: var(--ink-4);
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+  overflow: hidden; line-height: 1.2; max-width: 150px;
+}
+.home-child-change-sm {
+  font-size: 10px; font-weight: 700; color: var(--teal);
+  margin-left: 2px; white-space: nowrap; flex-shrink: 0;
+}
+
+/* ── Home child card (kept for applyChildData compat) ── */
+  margin: 14px 18px 0;
+  background: var(--surface); border: 1px solid var(--line);
+  border-radius: var(--r-lg); padding: 13px 16px;
+  display: flex; align-items: center; gap: 12px; box-shadow: var(--sh-sm);
+}
+.home-child-ava {
+  width: 44px; height: 44px; border-radius: 50%;
+  background: linear-gradient(135deg, #FFCF6E, #F59E0B);
+  display: flex; align-items: center; justify-content: center; font-size: 24px; flex-shrink: 0;
+}
+.home-child-info { flex: 1; }
+.home-child-name { font-size: 15px; font-weight: 700; color: var(--ink); }
+.home-child-sub  { font-size: 12px; font-weight: 500; color: var(--ink-3); margin-top: 2px; }
+.home-child-change { font-size: 11.5px; font-weight: 600; color: var(--teal); cursor: pointer; flex-shrink: 0; }
+
+/* ── Main heading ── */
+.home-heading-wrap {
+  padding: 24px 20px 6px;
+}
+.home-heading {
+  font-size: 22px; font-weight: 700; color: var(--ink); letter-spacing: -.025em; line-height: 1.25;
+}
+.home-heading-sub {
+  font-size: 13.5px; font-weight: 500; color: var(--ink-3); margin-top: 5px; line-height: 1.5;
+}
+
+/* ── PRIMARY ACTIONS ── */
+.home-primary-wrap {
+  padding: 18px 18px 0;
+  display: flex; flex-direction: column; gap: 12px;
+}
+
+/* Crisis button — large, dominant */
+.home-crisis-btn {
+  background: linear-gradient(145deg, #DC2626 0%, #B91C1C 100%);
+  border-radius: 20px; padding: 22px 20px;
+  cursor: pointer; box-shadow: 0 6px 24px rgba(220,38,38,.35), 0 2px 8px rgba(220,38,38,.2);
+  display: flex; align-items: center; gap: 16px;
+  transition: transform .15s cubic-bezier(.34,1.56,.64,1), box-shadow .15s;
+  -webkit-tap-highlight-color: transparent; border: none; width: 100%; text-align: left;
+  position: relative; overflow: hidden;
+}
+.home-crisis-btn::before {
+  content: ''; position: absolute; inset: 0;
+  background: linear-gradient(135deg, rgba(255,255,255,.12) 0%, transparent 60%);
+  border-radius: 20px;
+}
+.home-crisis-btn:hover { transform: translateY(-2px); box-shadow: 0 10px 32px rgba(220,38,38,.4), 0 4px 12px rgba(220,38,38,.25); }
+.home-crisis-btn:active { transform: scale(.97); }
+.home-crisis-icon {
+  width: 52px; height: 52px; border-radius: 16px; flex-shrink: 0;
+  background: rgba(255,255,255,.2); border: 1.5px solid rgba(255,255,255,.3);
+  display: flex; align-items: center; justify-content: center;
+}
+.home-crisis-icon svg { width: 28px; height: 28px; stroke: #fff; }
+.home-crisis-text { flex: 1; position: relative; }
+.home-crisis-label {
+  font-size: 10.5px; font-weight: 700; color: rgba(255,255,255,.7);
+  letter-spacing: .09em; text-transform: uppercase; margin-bottom: 4px;
+}
+.home-crisis-title { font-size: 19px; font-weight: 700; color: #fff; letter-spacing: -.02em; line-height: 1.2; }
+.home-crisis-sub   { font-size: 12.5px; font-weight: 500; color: rgba(255,255,255,.75); margin-top: 4px; line-height: 1.4; }
+.home-crisis-arrow {
+  width: 36px; height: 36px; border-radius: 50%; flex-shrink: 0; position: relative;
+  background: rgba(255,255,255,.18); display: flex; align-items: center; justify-content: center;
+}
+.home-crisis-arrow svg { width: 18px; height: 18px; stroke: #fff; }
+
+/* AI Chat button — strong primary */
+.home-chat-btn {
+  background: linear-gradient(145deg, #1F9070 0%, #166d55 100%);
+  border: none;
+  border-radius: 18px; padding: 18px 18px;
+  cursor: pointer; box-shadow: 0 4px 16px rgba(31,144,112,.3);
+  display: flex; align-items: center; gap: 14px;
+  transition: transform .15s, box-shadow .15s;
+  -webkit-tap-highlight-color: transparent; width: 100%; text-align: left;
+}
+.home-chat-btn:hover { transform: translateY(-1px); box-shadow: 0 8px 24px rgba(31,144,112,.4); }
+.home-chat-btn:active { transform: scale(.98); }
+.home-chat-icon {
+  width: 46px; height: 46px; border-radius: 14px; flex-shrink: 0;
+  background: rgba(255,255,255,.18); border: 1.5px solid rgba(255,255,255,.25);
+  display: flex; align-items: center; justify-content: center;
+}
+.home-chat-icon svg { width: 24px; height: 24px; stroke: #fff; }
+.home-chat-text { flex: 1; }
+.home-chat-title { font-size: 17px; font-weight: 700; color: #fff; letter-spacing: -.01em; }
+.home-chat-sub   { font-size: 12.5px; font-weight: 500; color: rgba(255,255,255,.8); margin-top: 3px; }
+.home-chat-arrow { width: 32px; height: 32px; border-radius: 50%; background: rgba(255,255,255,.18); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.home-chat-arrow svg { width: 16px; height: 16px; stroke: #fff; }
+
+/* ── Last episode block ── */
+.home-last-ep {
+  background: var(--surface); border: 1px solid var(--line);
+  border-radius: var(--r-lg); padding: 14px 16px;
+  box-shadow: var(--sh-sm);
+}
+.home-last-ep-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 6px;
+}
+.home-last-ep-title {
+  font-size: 11px; font-weight: 700; color: var(--ink-3);
+  letter-spacing: .06em; text-transform: uppercase;
+}
+.home-last-ep-badge { font-size: 14px; }
+.home-last-ep-text {
+  font-size: 14px; font-weight: 600; color: var(--ink); line-height: 1.4;
+  margin-bottom: 12px;
+}
+.home-last-ep-btn {
+  width: 100%; padding: 10px; border: none;
+  background: var(--teal-bg); border-radius: var(--r-md);
+  font-family: var(--f); font-size: 13px; font-weight: 700;
+  color: var(--teal); cursor: pointer; transition: background .15s;
+  text-align: center;
+}
+.home-last-ep-btn:hover { background: #B6E0D3; }
+.home-last-ep-btn:active { transform: scale(.98); }
+
+/* ── Divider ── */
+.home-divider {
+  margin: 26px 20px 0;
+  display: flex; align-items: center; gap: 12px;
+}
+.home-divider-line { flex: 1; height: 1px; background: var(--line); }
+.home-divider-label { font-size: 11px; font-weight: 700; color: var(--ink-4); letter-spacing: .07em; text-transform: uppercase; white-space: nowrap; }
+
+/* ── Secondary actions (compact) ── */
+.home-secondary-wrap {
+  padding: 14px 18px 30px;
+  display: flex; flex-direction: column; gap: 8px;
+}
+.home-sec-btn {
+  display: flex; align-items: center; gap: 13px;
+  background: var(--surface); border: 1px solid var(--line);
+  border-radius: var(--r-lg); padding: 13px 15px;
+  cursor: pointer; transition: background .14s, box-shadow .14s;
+  -webkit-tap-highlight-color: transparent;
+}
+.home-sec-btn:hover { background: var(--line-2); box-shadow: var(--sh-sm); }
+.home-sec-btn:active { transform: scale(.99); }
+.home-sec-icon {
+  width: 36px; height: 36px; border-radius: 10px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+}
+.home-sec-icon svg { width: 17px; height: 17px; }
+.home-sec-title { font-size: 14px; font-weight: 650; color: var(--ink); flex: 1; }
+.home-sec-sub   { font-size: 11.5px; font-weight: 500; color: var(--ink-3); }
+.home-sec-arrow svg { width: 15px; height: 15px; stroke: var(--ink-4); flex-shrink: 0; }
+
+/* ── AI observation card ── */
+.home-observe-card {
+  margin: 12px 18px 0;
+  background: #F8F5FF;
+  border: 1.5px solid #E9DDFE;
+  border-radius: var(--r-lg);
+  padding: 14px 16px;
+  box-shadow: var(--sh-sm);
+  display: none;
+}
+.home-observe-card.visible { display: block; }
+.home-observe-header {
+  display: flex; align-items: center; gap: 8px; margin-bottom: 7px;
+}
+.home-observe-icon {
+  width: 28px; height: 28px; border-radius: 8px; flex-shrink: 0;
+  background: #7C3AED; display: flex; align-items: center; justify-content: center;
+}
+.home-observe-icon svg { width: 14px; height: 14px; stroke: #fff; }
+.home-observe-title {
+  font-size: 11px; font-weight: 700; color: var(--purple);
+  letter-spacing: .06em; text-transform: uppercase;
+}
+.home-observe-text {
+  font-size: 13.5px; font-weight: 600; color: var(--ink); line-height: 1.45;
+  margin-bottom: 11px;
+}
+.home-observe-text.muted {
+  font-size: 13px; font-weight: 500; color: var(--ink-3);
+}
+.home-observe-btn {
+  width: 100%; padding: 9px; border: none;
+  background: rgba(124,58,237,.08); border: 1px solid rgba(124,58,237,.18); border-radius: var(--r-md);
+  font-family: var(--f); font-size: 13px; font-weight: 700;
+  color: #6D28D9; cursor: pointer; transition: background .15s, border-color .15s;
+  text-align: center;
+}
+.home-observe-btn:hover { background: rgba(124,58,237,.12); border-color: rgba(124,58,237,.28); }
+.home-observe-btn:active { transform: scale(.98); }
+
+/* ══════════════════════════════════════════
+   SCREEN: CHAT — COMPACT ONE-SCREEN VERSION
+══════════════════════════════════════════ */
+.chat-sticky { flex-shrink: 0; background: var(--surface); }
+.chat-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 7px 12px 8px; border-bottom: 1px solid var(--line); gap: 8px;
+}
+.chat-header-left { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.ai-avatar {
+  width: 34px; height: 34px; border-radius: 50%; flex-shrink: 0;
+  background: linear-gradient(135deg, var(--teal-2), var(--teal));
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 2px 6px rgba(31,144,112,.28); position: relative;
+}
+.ai-avatar::after {
+  content: ''; position: absolute; bottom: 1px; right: 1px;
+  width: 9px; height: 9px; border-radius: 50%; background: #22C55E; border: 2px solid #fff;
+}
+.ai-avatar svg { width: 18px; height: 18px; }
+.ai-title { font-size: 13.5px; font-weight: 700; color: var(--ink); }
+.ai-sub   { font-size: 11px; font-weight: 500; color: var(--teal); margin-top: 1px; }
+.ctx-pill {
+  display: flex; align-items: center; gap: 6px;
+  background: var(--teal-bg); border: 1.5px solid #B6E0D3;
+  border-radius: 12px; padding: 5px 10px 5px 8px;
+  min-width: 0; max-width: 230px; cursor: pointer; transition: background .15s;
+}
+.ctx-pill:hover { background: #E2F5EE; }
+.ctx-pill-copy { min-width: 0; }
+.ctx-emoji { font-size: 16px; line-height: 1; flex-shrink: 0; }
+.ctx-name  { font-size: 12px; font-weight: 700; color: var(--ink); display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ctx-tag   {
+  font-size: 10px; font-weight: 600; color: var(--teal); display: block;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+/* Messages area — scrollable flex column */
+.msgs-scroll { flex: 1; overflow-y: auto; display: flex; flex-direction: column; min-height: 0; }
+.msgs-scroll::-webkit-scrollbar { display: none; }
+
+/* ── Messages container ── */
+.msgs {
+  padding: 10px 12px 6px;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  flex-grow: 1;
+  justify-content: flex-start;
+}
+.msg-time-label {
+  align-self: center; font-size: 10px; font-weight: 600; color: var(--ink-4);
+  background: var(--line-2); border: 1px solid var(--line);
+  padding: 3px 10px; border-radius: 20px; margin: 0 0 8px;
+}
+
+/* AI row */
+.msg-row {
+  display: flex; flex-direction: row; align-items: flex-end;
+  gap: 7px; margin-bottom: 3px;
+  align-self: flex-start; max-width: 80%;
+  margin-right: auto; margin-left: 0;
+}
+/* User row */
+.msg-row.user {
+  flex-direction: row-reverse; align-self: flex-end;
+  max-width: 80%; margin-left: auto; margin-right: 0;
+}
+.msg-av {
+  width: 24px; height: 24px; border-radius: 50%; flex-shrink: 0;
+  background: linear-gradient(135deg, var(--teal-2), var(--teal));
+  display: flex; align-items: center; justify-content: center; margin-bottom: 2px;
+}
+.msg-av svg { width: 11px; height: 11px; }
+.bubble {
+  padding: 8px 12px; font-size: 13px; line-height: 1.5; font-weight: 500;
+  animation: bpop .2s cubic-bezier(.34,1.56,.64,1) both;
+}
+@keyframes bpop {
+  from { opacity: 0; transform: scale(.9) translateY(4px); }
+  to   { opacity: 1; transform: none; }
+}
+.bubble.ai {
+  background: var(--surface); color: var(--ink); border: 1px solid var(--line);
+  border-radius: 4px 16px 16px 16px; box-shadow: var(--sh-sm);
+}
+.bubble.user {
+  background: var(--teal); color: #fff;
+  border-radius: 16px 16px 4px 16px;
+  box-shadow: 0 2px 6px rgba(31,144,112,.24);
+}
+.clear-chat-btn {
+  width: 30px; height: 30px; border-radius: 8px;
+  background: transparent; border: 1.5px solid var(--line);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; transition: all .15s; flex-shrink: 0; opacity: .72;
+}
+.clear-chat-btn svg { width: 14px; height: 14px; stroke: var(--ink-4); }
+.clear-chat-btn:hover { background: var(--red-bg); border-color: #FECACA; }
+.clear-chat-btn:hover svg { stroke: var(--red-2); }
+
+.copy-btn {
+  display: flex; align-items: center; gap: 4px;
+  background: transparent; border: none; padding: 4px 8px;
+  font-family: var(--f); font-size: 11px; font-weight: 600;
+  color: var(--ink-4); cursor: pointer; transition: color .15s;
+}
+.copy-btn svg { width: 11px; height: 11px; stroke: var(--ink-4); transition: stroke .15s; }
+.copy-btn:hover { color: var(--teal); }
+.copy-btn:hover svg { stroke: var(--teal); }
+.copy-btn.copied { color: var(--teal); }
+.copy-btn.copied svg { stroke: var(--teal); }
+
+.msg-meta-dur { font-size: 10px; font-weight: 500; color: var(--ink-4); margin-left: 2px; }
+.msg-meta.right { justify-content: flex-end; padding: 0 2px; }
+.msg-meta-time  { font-size: 10px; font-weight: 600; color: var(--ink-4); }
+.msg-meta-check { font-size: 11px; color: var(--teal-2); }
+
+/* ── Detect card — compact ── */
+.detect-card {
+  align-self: flex-start;
+  margin: 2px 0 6px 31px;
+  background: var(--purple-bg); border: 1.5px solid #DDD6FE;
+  border-radius: var(--r-md); padding: 6px 11px;
+  display: flex; align-items: center; gap: 8px;
+  animation: bpop .22s .04s both;
+}
+.detect-icon {
+  width: 22px; height: 22px; border-radius: 6px; background: #EDE9FE; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+}
+.detect-icon svg { width: 11px; height: 11px; stroke: var(--purple); }
+.detect-label { font-size: 9.5px; font-weight: 700; color: var(--purple); letter-spacing: .05em; text-transform: uppercase; margin-bottom: 1px; }
+.detect-value { font-size: 11.5px; font-weight: 700; color: #3B0764; }
+
+/* ── Response card — compact ── */
+.response-card {
+  align-self: flex-start;
+  margin: 2px 0 6px 31px;
+  background: var(--surface); border: 1px solid var(--line);
+  border-radius: var(--r-lg); overflow: hidden;
+  box-shadow: var(--sh-sm); animation: bpop .22s .08s both;
+  max-width: calc(100% - 43px);
+}
+.rc-section { padding: 8px 12px; border-bottom: 1px solid var(--line-2); }
+.rc-section:last-child { border-bottom: none; }
+.rc-section-head { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; }
+.rc-section-icon {
+  width: 18px; height: 18px; border-radius: 5px;
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+.rc-section-icon svg { width: 9px; height: 9px; }
+.rc-section-title { font-size: 9.5px; font-weight: 700; color: var(--ink-3); letter-spacing: .05em; text-transform: uppercase; }
+.rc-steps  { display: flex; flex-direction: column; gap: 5px; }
+.rc-bullets{ display: flex; flex-direction: column; gap: 4px; }
+.rc-bullet { font-size: 12px; color: var(--ink-2); line-height: 1.45; font-weight: 500; }
+.rc-step   { display: flex; align-items: flex-start; gap: 7px; }
+.rc-step-num {
+  width: 16px; height: 16px; border-radius: 50%;
+  background: var(--teal); color: #fff; font-size: 9px; font-weight: 700;
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px;
+}
+.rc-step-text { font-size: 12px; color: var(--ink-2); line-height: 1.45; font-weight: 500; }
+.rc-step-text strong { color: var(--ink); font-weight: 700; }
+
+.icon-teal   { background: var(--teal-bg); }
+.icon-teal   svg { stroke: var(--teal); }
+.icon-blue   { background: var(--blue-bg); }
+.icon-blue   svg { stroke: var(--blue); }
+.icon-purple { background: var(--purple-bg); }
+.icon-purple svg { stroke: var(--purple); }
+
+/* ── AI identity banner — compact ── */
+.ai-intro-banner {
+  margin: 10px 12px 4px;
+  background: var(--bg); border: 1px solid var(--line);
+  border-radius: var(--r-md); padding: 9px 12px;
+  display: flex; gap: 10px; align-items: center;
+}
+.ai-intro-avatar {
+  width: 32px; height: 32px; border-radius: 50%; flex-shrink: 0;
+  background: linear-gradient(135deg, var(--teal-2), var(--teal));
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 2px 6px rgba(31,144,112,.22); position: relative;
+}
+.ai-intro-avatar::after {
+  content: ''; position: absolute; bottom: 0; right: 0;
+  width: 9px; height: 9px; border-radius: 50%; background: #22C55E; border: 2px solid var(--bg);
+}
+.ai-intro-avatar svg { width: 17px; height: 17px; }
+.ai-intro-body { flex: 1; }
+.ai-intro-name { font-size: 12px; font-weight: 700; color: var(--ink); margin-bottom: 2px; }
+.ai-intro-desc { font-size: 11px; font-weight: 500; color: var(--ink-3); line-height: 1.4; }
+
+/* ── Crisis calm note ── */
+.crisis-calm-note {
+  background: #FFF7ED; border: 1.5px solid #FCD34D;
+  border-radius: var(--r-md); padding: 11px 14px; margin-bottom: 16px;
+  font-size: 13px; font-weight: 500; color: #78350F; line-height: 1.6;
+}
+.crisis-hdr-sub { font-size: 12px; font-weight: 500; color: rgba(255,255,255,.8); margin-top: 3px; }
+
+/* ── Action row — compact ── */
+.action-row {
+  align-self: flex-start;
+  display: flex; align-items: center; gap: 6px;
+  margin: 4px 0 4px 31px;
+}
+.feedback-btn {
+  display: flex; align-items: center; gap: 3px;
+  background: var(--surface); border: 1.5px solid var(--line);
+  border-radius: 20px; padding: 4px 10px;
+  font-family: var(--f); font-size: 11px; font-weight: 600;
+  color: var(--ink-3); cursor: pointer; transition: all .15s; box-shadow: var(--sh-sm);
+}
+.feedback-btn.helped:hover, .feedback-btn.active-helped { background: var(--teal-bg); border-color: #A7E9D2; color: var(--teal); }
+.feedback-btn.nope:hover,   .feedback-btn.active-nope   { background: var(--red-bg);  border-color: #FECACA; color: var(--red); }
+.save-btn {
+  display: flex; align-items: center; gap: 4px;
+  background: transparent; border: none; padding: 4px 8px;
+  font-family: var(--f); font-size: 11px; font-weight: 600;
+  color: var(--ink-4); cursor: pointer; transition: color .15s;
+}
+.save-btn svg { width: 11px; height: 11px; stroke: var(--ink-4); transition: all .15s; }
+.save-btn:hover { color: var(--amber); }
+.save-btn:hover svg { stroke: var(--amber-2); }
+.save-btn.saved { color: var(--amber); }
+.save-btn.saved svg { stroke: var(--amber-2); fill: var(--amber-2); }
+
+/* ── Streaming cursor ── */
+.stream-cursor {
+  display: inline-block;
+  animation: blink .7s step-end infinite;
+  color: var(--teal);
+  font-weight: 400;
+  margin-left: 2px;
+}
+@keyframes blink { 0%,100% { opacity:1; } 50% { opacity:0; } }
+.stream-label { color: var(--ink-3); font-style: italic; }
+.typing-row { display: flex; gap: 7px; align-items: flex-end; margin-bottom: 6px; align-self: flex-start; }
+.typing-bub {
+  background: var(--surface); border: 1px solid var(--line);
+  border-radius: 4px 16px 16px 16px; padding: 9px 13px;
+  display: flex; gap: 4px; align-items: center; box-shadow: var(--sh-sm);
+}
+.tdot { width: 5px; height: 5px; border-radius: 50%; background: var(--ink-4); animation: td 1.4s ease-in-out infinite; }
+.tdot:nth-child(2) { animation-delay: .16s; }
+.tdot:nth-child(3) { animation-delay: .32s; }
+@keyframes td {
+  0%,60%,100% { transform: translateY(0); opacity: .4; }
+  30%          { transform: translateY(-4px); opacity: 1; }
+}
+
+
+.chat-examples {
+  margin: 10px 12px 4px;
+  padding: 10px 12px;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+}
+.chat-examples-title {
+  font-size: 10.5px; font-weight: 700; color: var(--ink-4);
+  letter-spacing: .05em; text-transform: uppercase; margin-bottom: 6px;
+}
+.chat-examples-text {
+  font-size: 12px; font-weight: 500; color: var(--ink-3); line-height: 1.45;
+}
+
+/* ── Chips — compact single row ── */
+.chips-bar {
+  display: flex; gap: 6px; flex-wrap: nowrap; overflow-x: auto;
+  padding: 4px 0 6px; background: transparent;
+}
+.chips-bar::-webkit-scrollbar { display: none; }
+.chip {
+  background: var(--bg); border: 1.5px solid var(--line);
+  border-radius: 16px; padding: 6px 12px; white-space: nowrap;
+  font-family: var(--f); font-size: 12px; font-weight: 600;
+  color: var(--ink-3); cursor: pointer; transition: all .16s;
+  flex-shrink: 0;
+}
+.chip:active, .chip:hover { background: var(--teal-bg); border-color: #A7E9D2; color: var(--teal); }
+
+/* ── Input bar ── */
+.input-bar {
+  display: flex; flex-direction: column;
+  padding: 6px 12px 16px; background: var(--surface);
+  border-top: 1px solid var(--line); flex-shrink: 0;
+}
+.input-row {
+  display: flex; align-items: center; gap: 8px; margin-top: 4px;
+}
+.input-wrap {
+  flex: 1; display: flex; align-items: center;
+  background: var(--bg); border: 1.5px solid var(--line);
+  border-radius: 22px; padding: 0 12px; transition: border-color .18s, box-shadow .18s;
+}
+.input-wrap:focus-within { border-color: var(--teal-2); box-shadow: 0 0 0 3px rgba(45,175,136,.12); }
+.input-icon { width: 14px; height: 14px; stroke: var(--ink-4); flex-shrink: 0; }
+.chat-input {
+  flex: 1; border: none; background: transparent;
+  padding: 9px 7px; font-family: var(--f); font-size: 13.5px;
+  color: var(--ink); outline: none; font-weight: 500;
+}
+.chat-input::placeholder { color: var(--ink-4); }
+.send-btn {
+  width: 36px; height: 36px; border-radius: 50%; background: var(--teal); border: none;
+  cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  box-shadow: 0 2px 6px rgba(31,144,112,.32);
+  transition: all .17s cubic-bezier(.34,1.56,.64,1);
+}
+.send-btn:hover { transform: scale(1.08); }
+.send-btn:active { transform: scale(.95); }
+.send-btn svg { width: 14px; height: 14px; }
+
+/* ── followup bubble (kept for dynamic use only) ── */
+.followup-bubble {
+  align-self: flex-start; margin: 0 0 8px 31px;
+  background: var(--line-2); border: 1px solid var(--line);
+  border-radius: 4px 16px 16px 16px; padding: 7px 12px;
+  font-size: 12px; font-weight: 500; color: var(--ink-2); font-style: italic;
+  animation: bpop .2s .18s both; max-width: calc(100% - 43px);
+}
+
+/* ══════════════════════════════════════════
+   SCREEN: INSIGHTS
+══════════════════════════════════════════ */
+.pattern-card {
+  background: var(--surface); border: 1px solid var(--line);
+  border-radius: var(--r-xl); padding: 15px 16px; margin-bottom: 11px; box-shadow: var(--sh-sm);
+}
+.pattern-card-head { display: flex; align-items: center; gap: 11px; margin-bottom: 11px; }
+.pattern-card-icon {
+  width: 38px; height: 38px; border-radius: 11px; background: var(--blue-bg); flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+}
+.pattern-card-icon svg { width: 19px; height: 19px; stroke: var(--blue); }
+.pattern-card-label { font-size: 10.5px; font-weight: 700; color: var(--blue); letter-spacing: .06em; text-transform: uppercase; margin-bottom: 2px; }
+.pattern-card-title { font-size: 14.5px; font-weight: 700; color: var(--ink); letter-spacing: -.01em; }
+.pattern-card-body  { font-size: 13px; font-weight: 500; color: var(--ink-2); line-height: 1.58; margin-bottom: 11px; }
+.ep-chart { display: flex; gap: 5px; align-items: flex-end; padding: 4px 0; }
+.ep-bar-wrap { display: flex; flex-direction: column; align-items: center; gap: 4px; flex: 1; }
+.ep-bar-outer { width: 100%; border-radius: 4px 4px 0 0; background: var(--line); height: 50px; display: flex; align-items: flex-end; }
+.ep-bar-fill { width: 100%; border-radius: 4px 4px 0 0; transition: height .5s ease; }
+/* Category-typed bar colors */
+.ep-bar-fill.cat-сенс     { background: var(--cat-сенс); }
+.ep-bar-fill.cat-environment    { background: var(--cat-environment); }
+.ep-bar-fill.cat-transition  { background: var(--cat-transition); }
+.ep-bar-fill.cat-сост     { background: var(--cat-сост); }
+.ep-bar-fill.cat-none     { background: var(--cat-none); }
+/* Legacy aliases for static bars */
+.ep-bar-fill.hi  { background: var(--cat-сенс); }
+.ep-bar-fill.lo  { background: var(--cat-none); }
+.ep-bar-fill.med { background: var(--cat-environment); }
+.ep-bar-date { font-size: 9.5px; font-weight: 600; color: var(--ink-4); white-space: nowrap; }
+
+/* ── Chart legend ── */
+.ep-legend {
+  display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px;
+}
+.ep-legend-item {
+  display: flex; align-items: center; gap: 4px;
+  font-size: 10px; font-weight: 600; color: var(--ink-3);
+}
+.ep-legend-dot {
+  width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+}
+
+.pattern-rec {
+  background: var(--teal-bg); border: 1px solid #A7E9D2;
+  border-radius: var(--r-md); padding: 11px 14px; margin-top: 11px;
+  display: flex; gap: 9px; align-items: flex-start;
+}
+.pattern-rec-icon  { font-size: 17px; flex-shrink: 0; margin-top: 1px; }
+.pattern-rec-title { font-size: 11px; font-weight: 700; color: var(--teal); text-transform: uppercase; letter-spacing: .05em; margin-bottom: 3px; }
+.pattern-rec-body  { font-size: 12.5px; font-weight: 500; color: #1D4D3A; line-height: 1.55; }
+.episode-card {
+  background: var(--surface); border: 1px solid var(--line);
+  border-radius: var(--r-xl); overflow: hidden; box-shadow: var(--sh-sm); margin-bottom: 11px;
+}
+.ep-item { display: flex; gap: 13px; padding: 13px 15px; border-bottom: 1px solid var(--line-2); align-items: flex-start; }
+.ep-item:last-child { border-bottom: none; }
+.ep-date { flex-shrink: 0; text-align: center; width: 34px; }
+.ep-date-day   { font-size: 16px; font-weight: 700; color: var(--ink); line-height: 1.1; }
+.ep-date-month { font-size: 10.5px; font-weight: 600; color: var(--ink-3); text-transform: uppercase; }
+.ep-dot-line { display: flex; flex-direction: column; align-items: center; flex-shrink: 0; margin-top: 3px; }
+.ep-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+/* Category-typed dot colors */
+.ep-dot.cat-сенс     { background: var(--cat-сенс); }
+.ep-dot.cat-environment    { background: var(--cat-environment); }
+.ep-dot.cat-transition  { background: var(--cat-transition); }
+.ep-dot.cat-сост     { background: var(--cat-сост); }
+.ep-dot.cat-none     { background: var(--cat-none); }
+/* Legacy kept for static episodes */
+.ep-dot.red   { background: var(--cat-сенс); }
+.ep-dot.amber { background: var(--cat-transition); }
+.ep-line { width: 1.5px; flex: 1; background: var(--line); margin-top: 3px; min-height: 24px; }
+.ep-item:last-child .ep-line { display: none; }
+.ep-place    { font-size: 13.5px; font-weight: 700; color: var(--ink); margin-bottom: 2px; }
+.ep-behavior { font-size: 12px; font-weight: 500; color: var(--ink-2); line-height: 1.45; margin-bottom: 6px; }
+.ep-trigger {
+  display: inline-flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 700;
+  background: var(--cat-none-bg); color: var(--cat-none); padding: 3px 9px;
+  border-radius: 20px; border: 1px solid var(--cat-none-border);
+}
+.ep-trigger svg { width: 11px; height: 11px; stroke: var(--cat-none); }
+/* Category-typed tag classes */
+.ep-trigger.cat-сенс     { background: var(--cat-сенс-bg);    color: var(--cat-сенс);    border-color: var(--cat-сенс-border); }
+.ep-trigger.cat-сенс svg { stroke: var(--cat-сенс); }
+.ep-trigger.cat-environment    { background: var(--cat-environment-bg);   color: var(--cat-environment);   border-color: var(--cat-environment-border); }
+.ep-trigger.cat-environment svg { stroke: var(--cat-environment); }
+.ep-trigger.cat-transition  { background: var(--cat-transition-bg); color: var(--cat-transition); border-color: var(--cat-transition-border); }
+.ep-trigger.cat-transition svg { stroke: var(--cat-transition); }
+.ep-trigger.cat-сост     { background: var(--cat-сост-bg);    color: var(--cat-сост);    border-color: var(--cat-сост-border); }
+.ep-trigger.cat-сост svg { stroke: var(--cat-сост); }
+.ep-trigger.cat-none     { background: var(--cat-none-bg);    color: var(--cat-none);    border-color: var(--cat-none-border); }
+.ep-trigger.cat-none svg { stroke: var(--cat-none); }
+/* Legacy alias for static episodes */
+.ep-trigger.amber { background: var(--cat-transition-bg); color: var(--cat-transition); border-color: var(--cat-transition-border); }
+.ep-trigger.amber svg { stroke: var(--cat-transition); }
+
+/* ══════════════════════════════════════════
+   SCREEN: WORK
+══════════════════════════════════════════ */
+.work-screen {
+  flex: 1;
+  overflow-y: auto;
+  background: #F7F3EC;
+  padding: 12px 14px 26px;
+}
+.work-screen::-webkit-scrollbar { display: none; }
+.work-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+.work-brand {
+  font-size: 16px;
+  font-weight: 700;
+  color: #3A9A93;
+  letter-spacing: -.02em;
+}
+.work-bag {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  border: none;
+  background: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #3A9A93;
+  cursor: pointer;
+}
+.work-bag svg { width: 22px; height: 22px; stroke: currentColor; }
+.work-subtitle {
+  font-size: 11px;
+  font-weight: 500;
+  color: #4B5563;
+  margin-bottom: 14px;
+}
+.work-tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  background: #F3E5DA;
+  border: 1px solid #EFDCCF;
+  border-radius: 16px;
+  padding: 3px;
+  gap: 2px;
+  margin-bottom: 16px;
+}
+.work-tab {
+  border: none;
+  background: transparent;
+  color: #8A7B72;
+  font-family: var(--f);
+  font-size: 14px;
+  font-weight: 600;
+  padding: 12px 0;
+  border-radius: 13px;
+  cursor: pointer;
+  transition: all .15s;
+}
+.work-tab.active {
+  background: #FFFDF9;
+  color: #3B3645;
+  box-shadow: 0 2px 7px rgba(60,34,14,.08);
+}
+.work-section {
+  margin-bottom: 10px;
+}
+.work-section-title {
+  font-size: 11px;
+  font-weight: 700;
+  color: #474554;
+  margin: 14px 2px 10px;
+}
+.work-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: #FFFDF9;
+  border: 1px solid #EADFD3;
+  border-radius: 18px;
+  padding: 12px;
+  box-shadow: 0 2px 8px rgba(93,64,33,.06);
+  margin-bottom: 12px;
+}
+.work-card-thumb {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  overflow: hidden;
+  flex-shrink: 0;
+  background: #E9E2D8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.work-card-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.work-card-body {
+  min-width: 0;
+  flex: 1;
+}
+.work-card-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #3D3945;
+  line-height: 1.25;
+  margin-bottom: 3px;
+}
+.work-card-date {
+  font-size: 10px;
+  font-weight: 500;
+  color: #6E6B78;
+}
+.work-card-side {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
+  flex-shrink: 0;
+}
+.work-card-price {
+  font-size: 13px;
+  font-weight: 600;
+  color: #4A4655;
+  white-space: nowrap;
+}
+.work-btn {
+  min-width: 112px;
+  border: none;
+  border-radius: 12px;
+  padding: 10px 14px;
+  font-family: var(--f);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform .12s, opacity .12s;
+  text-transform: none;
+}
+.work-btn:active { transform: scale(.98); }
+.work-btn.details {
+  background: var(--teal-2);
+  color: #F2FBFA;
+  box-shadow: inset 0 0 0 1px rgba(31,144,112,.18);
+}
+.work-btn.disabled {
+  background: #F79A8A;
+  color: #7A3E3F;
+  cursor: default;
+}
+.work-btn.paid {
+  background: #63636E;
+  color: #4FC8BD;
+  cursor: default;
+}
+.work-empty {
+  display: none;
+  text-align: center;
+  padding: 34px 20px;
+  color: #8A7B72;
+  font-size: 13px;
+  font-weight: 500;
+}
+.work-empty.show { display: block; }
+.work-detail {
+  position: absolute;
+  inset: 0;
+  z-index: 60;
+  background: #FFFDF9;
+  display: none;
+  flex-direction: column;
+}
+.work-detail.open { display: flex; }
+.work-detail-top {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px 10px;
+}
+.work-detail-back {
+  width: 34px;
+  height: 34px;
+  border: none;
+  background: transparent;
+  color: #D34E74;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+.work-detail-back svg { width: 24px; height: 24px; stroke: currentColor; }
+.work-detail-title {
+  font-size: 28px;
+  font-weight: 500;
+  color: #D34E74;
+  letter-spacing: -.03em;
+}
+.work-detail-body {
+  padding: 10px 18px 24px;
+  overflow-y: auto;
+}
+.work-detail-body::-webkit-scrollbar { display: none; }
+.work-detail-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: #44404D;
+  margin-bottom: 4px;
+}
+.work-detail-amount {
+  font-size: 40px;
+  line-height: 1;
+  font-weight: 700;
+  color: #F28F81;
+  margin-bottom: 20px;
+  letter-spacing: -.04em;
+}
+.work-detail-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px 14px;
+  margin-bottom: 18px;
+}
+.work-detail-meta-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: #57535F;
+  margin-bottom: 4px;
+}
+.work-detail-meta-value {
+  font-size: 17px;
+  font-weight: 500;
+  color: #343241;
+  line-height: 1.3;
+}
+.work-detail-block-title {
+  font-size: 11px;
+  font-weight: 700;
+  color: #3A9A93;
+  margin-bottom: 6px;
+}
+.work-detail-desc {
+  font-size: 14px;
+  font-weight: 500;
+  color: #353341;
+  line-height: 1.45;
+  margin-bottom: 18px;
+}
+.work-customer-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.work-customer-avatar {
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+.work-customer-name {
+  font-size: 15px;
+  font-weight: 500;
+  color: #373443;
+}
+.work-customer-phone {
+  font-size: 12px;
+  font-weight: 500;
+  color: #494652;
+  margin-top: 3px;
+}
+.work-detail-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  margin: 8px 0 14px;
+}
+.work-detail-ghost {
+  height: 52px;
+  border-radius: 14px;
+  border: 1px solid #E7DDD3;
+  background: #FFFDF9;
+  font-family: var(--f);
+  font-size: 14px;
+  font-weight: 500;
+  color: #4A4655;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+.work-detail-ghost svg { width: 17px; height: 17px; stroke: currentColor; }
+.work-detail-claim {
+  width: 100%;
+  height: 56px;
+  border: none;
+  border-radius: 14px;
+  background: #2F9E9A;
+  color: #F2FBFA;
+  font-family: var(--f);
+  font-size: 15px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  box-shadow: 0 6px 14px rgba(47,158,154,.22);
+}
+.work-detail-claim svg { width: 18px; height: 18px; stroke: currentColor; }
+
+/* ══════════════════════════════════════════
+   SCREEN: LEARN
+══════════════════════════════════════════ */
+.learn-card {
+  display: flex; gap: 13px; align-items: flex-start;
+  background: var(--surface); border: 1px solid var(--line);
+  border-radius: var(--r-lg); padding: 15px; margin-bottom: 10px;
+  cursor: pointer; box-shadow: var(--sh-sm); transition: box-shadow .16s, transform .16s;
+}
+.learn-card:hover { box-shadow: var(--sh-md); transform: translateY(-1px); }
+.learn-accent { width: 4px; border-radius: 4px; flex-shrink: 0; align-self: stretch; min-height: 40px; }
+.learn-accent.teal   { background: var(--teal); }
+.learn-accent.blue   { background: var(--blue); }
+.learn-accent.amber  { background: var(--amber-2); }
+.learn-accent.purple { background: var(--purple); }
+.learn-accent.red    { background: var(--red-2); }
+.learn-accent.orange { background: var(--orange); }
+.learn-body { flex: 1; min-width: 0; }
+.learn-cat  { font-size: 10.5px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; margin-bottom: 5px; }
+.learn-cat.teal   { color: var(--teal); }
+.learn-cat.blue   { color: var(--blue); }
+.learn-cat.amber  { color: var(--amber); }
+.learn-cat.purple { color: var(--purple); }
+.learn-cat.red    { color: var(--red); }
+.learn-cat.orange { color: var(--orange); }
+.learn-title { font-size: 14px; font-weight: 700; color: var(--ink); line-height: 1.35; margin-bottom: 5px; }
+.learn-desc  { font-size: 12px; font-weight: 500; color: var(--ink-3); line-height: 1.5; margin-bottom: 8px; }
+.learn-meta  { display: flex; align-items: center; gap: 8px; }
+.learn-time  { font-size: 11px; font-weight: 600; color: var(--ink-4); display: flex; align-items: center; gap: 3px; }
+.learn-time svg { width: 12px; height: 12px; stroke: var(--ink-4); }
+.learn-badge { font-size: 10.5px; font-weight: 700; padding: 2px 8px; border-radius: 20px; }
+.learn-badge.new   { background: var(--teal-bg); color: var(--teal); }
+.learn-badge.saved { background: var(--amber-bg); color: var(--amber); }
+.learn-arrow { flex-shrink: 0; margin-top: 2px; }
+.learn-arrow svg { width: 17px; height: 17px; stroke: var(--ink-4); }
+.learn-card-linked:hover .learn-arrow svg { stroke: var(--teal); }
+.learn-card-linked:hover { border-color: var(--teal-2); }
+
+/* ─── IN-APP ARTICLE VIEWER ─── */
+.article-overlay {
+  position: absolute; inset: 0; z-index: 400;
+  background: #fff; display: none; flex-direction: column;
+  border-radius: 24px; overflow: hidden;
+}
+.article-overlay.open { display: flex; }
+.article-topbar {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 12px; background: var(--surface);
+  border-bottom: 1px solid var(--line); flex-shrink: 0; gap: 8px;
+}
+.article-back-btn {
+  display: flex; align-items: center; gap: 4px;
+  background: none; border: none; font-family: var(--f);
+  font-size: 13.5px; font-weight: 600; color: var(--teal);
+  cursor: pointer; padding: 4px 6px; border-radius: 8px;
+  transition: background .15s; white-space: nowrap; flex-shrink: 0;
+}
+.article-back-btn svg { width: 18px; height: 18px; stroke: var(--teal); }
+.article-back-btn:hover { background: var(--teal-bg); }
+.article-topbar-title {
+  font-size: 12px; font-weight: 600; color: var(--ink-3);
+  text-align: center; overflow: hidden;
+  display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical;
+}
+.article-loader {
+  display: flex; flex-direction: column; align-items: center;
+  justify-content: center; gap: 12px; flex: 1;
+  font-size: 13px; font-weight: 500; color: var(--ink-3);
+}
+.article-loader.hidden { display: none; }
+.article-spinner {
+  width: 28px; height: 28px; border-radius: 50%;
+  border: 3px solid var(--line); border-top-color: var(--teal);
+  animation: spin .7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.article-iframe {
+  flex: 1; border: none; width: 100%;
+  display: none;
+}
+.article-iframe.loaded { display: block; }
+
+/* ══════════════════════════════════════════
+   SCREEN: PROFILE
+══════════════════════════════════════════ */
+.profile-hero { padding: 22px 18px 18px; text-align: center; background: var(--surface); border-bottom: 1px solid var(--line); flex-shrink: 0; }
+.child-avatar {
+  width: 68px; height: 68px; border-radius: 50%;
+  background: linear-gradient(135deg, #FFCF6E, #F59E0B);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 30px; margin: 0 auto 11px;
+  box-shadow: 0 4px 14px rgba(245,158,11,.24), 0 0 0 3px #fff, 0 0 0 4px #FDE68A;
+}
+.profile-name { font-size: 20px; font-weight: 700; color: var(--ink); letter-spacing: -.02em; }
+.profile-sub  { font-size: 12.5px; font-weight: 500; color: var(--ink-3); margin-top: 3px; }
+.profile-tags { display: flex; gap: 7px; justify-content: center; margin-top: 11px; flex-wrap: wrap; }
+
+.profile-mom-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--ink-4);
+  letter-spacing: .02em;
+  text-transform: none;
+  margin: 18px 0 8px;
+}
+.profile-mom-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 16px;
+}
+.profile-mom-list .home-sec-btn {
+  padding: 11px 13px;
+  border-radius: 18px;
+}
+.profile-mom-list .home-sec-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 9px;
+}
+.profile-mom-list .home-sec-icon svg {
+  width: 15px;
+  height: 15px;
+}
+.profile-mom-list .home-sec-title {
+  font-size: 13.5px;
+  font-weight: 700;
+}
+.profile-mom-list .home-sec-sub {
+  font-size: 10.5px;
+  line-height: 1.25;
+}
+.profile-mom-list .home-sec-arrow svg {
+  width: 14px;
+  height: 14px;
+}
+.ptag { font-size: 11.5px; font-weight: 700; padding: 4px 11px; border-radius: 20px; }
+.ptag.green  { background: var(--teal-bg);   color: var(--teal); }
+.ptag.red    { background: var(--red-bg);    color: var(--red); }
+.ptag.amber  { background: var(--amber-bg);  color: var(--amber); }
+.ptag.blue   { background: var(--blue-bg);   color: var(--blue); }
+.ptag.purple { background: var(--purple-bg); color: var(--purple); }
+.alert-block {
+  background: #F8F5FF; border: 1.5px solid #E9DDFE;
+  border-radius: var(--r-lg); padding: 12px 14px; margin-bottom: 11px;
+  display: flex; gap: 10px; align-items: flex-start;
+}
+.alert-block-icon  { font-size: 19px; flex-shrink: 0; margin-top: 1px; }
+.alert-block-title { font-size: 13px; font-weight: 700; color: var(--purple); margin-bottom: 3px; }
+.alert-block-body  { font-size: 12px; font-weight: 500; color: var(--ink-2); line-height: 1.55; }
+.stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; margin-bottom: 11px; }
+.stat-card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-lg); padding: 13px 14px; box-shadow: var(--sh-sm); }
+.stat-icon-wrap { width: 30px; height: 30px; border-radius: 9px; display: flex; align-items: center; justify-content: center; margin-bottom: 9px; }
+.stat-icon-wrap svg { width: 15px; height: 15px; }
+.stat-value { font-size: 23px; font-weight: 700; color: var(--ink); letter-spacing: -.02em; }
+.stat-label { font-size: 10.5px; font-weight: 600; color: var(--ink-3); text-transform: uppercase; letter-spacing: .06em; margin-top: 2px; }
+.stat-note  { font-size: 11.5px; font-weight: 600; color: var(--teal); margin-top: 3px; }
+.prog-item { margin-bottom: 12px; }
+.prog-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+.prog-name  { font-size: 13px; font-weight: 600; color: var(--ink); }
+.prog-badge { font-size: 11px; font-weight: 700; color: var(--teal); background: var(--teal-bg); padding: 2px 8px; border-radius: 20px; }
+.prog-track { height: 7px; border-radius: 4px; background: var(--line); overflow: hidden; }
+.prog-fill  { height: 100%; border-radius: 4px; background: linear-gradient(90deg, var(--teal-2), var(--teal)); }
+.therapist-note { background: #FFFEF5; border: 1.5px solid #FEF08A; border-radius: var(--r-lg); padding: 13px 15px; }
+.tn-author { font-size: 11.5px; font-weight: 700; color: var(--ink-3); display: flex; align-items: center; gap: 7px; margin-bottom: 7px; }
+.tn-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--amber-2); }
+.tn-body { font-size: 13.5px; font-weight: 500; color: var(--ink); line-height: 1.65; font-style: italic; }
+
+/* ══════════════════════════════════════════
+   LOG EPISODE OVERLAY
+══════════════════════════════════════════ */
+.log-overlay {
+  position: absolute; inset: 0; z-index: 250;
+  background: var(--bg);
+  display: flex; flex-direction: column;
+  transform: translateX(100%);
+  transition: transform .28s cubic-bezier(.4,0,.2,1);
+  padding-top: 22px;
+}
+.log-overlay.open { transform: translateX(0); }
+
+.log-hdr {
+  background: var(--surface); border-bottom: 1px solid var(--line);
+  padding: 11px 16px 12px; display: flex; align-items: center; gap: 10px; flex-shrink: 0;
+}
+.log-back-btn {
+  width: 30px; height: 30px; border-radius: 50%; border: 1.5px solid var(--line);
+  background: var(--bg); cursor: pointer; display: flex; align-items: center; justify-content: center;
+  transition: background .15s; flex-shrink: 0;
+}
+.log-back-btn:hover { background: var(--line); }
+.log-back-btn svg { width: 15px; height: 15px; stroke: var(--ink-2); stroke-width: 2.2; }
+.log-hdr-title { font-size: 17px; font-weight: 700; color: var(--ink); letter-spacing: -.01em; }
+
+.log-body { flex: 1; overflow-y: auto; padding: 16px 16px 24px; }
+.log-body::-webkit-scrollbar { display: none; }
+
+.log-field { margin-bottom: 14px; }
+.log-label {
+  font-size: 11px; font-weight: 700; color: var(--ink-3);
+  letter-spacing: .06em; text-transform: uppercase; margin-bottom: 6px; display: block;
+}
+.log-input {
+  width: 100%; padding: 10px 12px;
+  background: var(--surface); border: 1.5px solid var(--line);
+  border-radius: var(--r-md); font-family: var(--f); font-size: 13.5px;
+  font-weight: 500; color: var(--ink); outline: none; resize: none;
+  transition: border-color .18s, box-shadow .18s;
+  -webkit-appearance: none;
+}
+.log-input:focus { border-color: var(--teal-2); box-shadow: 0 0 0 3px rgba(45,175,136,.12); }
+/* Ensure date input matches text input height/appearance */
+input[type="date"].log-input { cursor: pointer; }
+input[type="date"].log-input::-webkit-calendar-picker-indicator { opacity: .5; cursor: pointer; }
+.log-input::placeholder { color: var(--ink-4); }
+textarea.log-input { line-height: 1.5; }
+
+/* Tag chips for trigger selection */
+.log-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.log-tag {
+  padding: 5px 11px; border-radius: 20px; cursor: pointer;
+  font-family: var(--f); font-size: 11.5px; font-weight: 600;
+  background: var(--surface); border: 1.5px solid var(--line); color: var(--ink-3);
+  transition: all .15s;
+}
+.log-tag:hover  { background: var(--teal-bg); border-color: #A7E9D2; color: var(--teal); }
+.log-tag.active { background: var(--teal-bg); border-color: var(--teal); color: var(--teal); }
+
+/* Action buttons */
+.log-actions { display: flex; flex-direction: column; gap: 8px; margin-top: 4px; }
+.log-save-btn {
+  width: 100%; padding: 13px; border: none; border-radius: var(--r-lg);
+  background: var(--teal); color: #fff; font-family: var(--f);
+  font-size: 14px; font-weight: 700; cursor: pointer; text-align: center;
+  box-shadow: 0 4px 14px rgba(31,144,112,.28);
+  transition: background .15s, transform .12s;
+}
+.log-save-btn:hover  { background: var(--teal-2); }
+.log-save-btn:active { transform: scale(.98); }
+.log-cancel-btn {
+  width: 100%; padding: 12px; border: 1.5px solid var(--line); border-radius: var(--r-lg);
+  background: var(--surface); color: var(--ink-3); font-family: var(--f);
+  font-size: 13.5px; font-weight: 600; cursor: pointer; text-align: center;
+  transition: background .15s;
+}
+.log-cancel-btn:hover { background: var(--line-2); }
+
+/* ══════════════════════════════════════════
+   SAVE TOAST
+══════════════════════════════════════════ */
+.save-toast {
+  position: absolute; bottom: 80px; left: 14px; right: 14px; z-index: 260;
+  background: var(--ink); color: #fff; border-radius: var(--r-lg);
+  padding: 12px 15px; display: flex; align-items: flex-start; gap: 10px;
+  box-shadow: 0 8px 28px rgba(15,23,42,.22);
+  opacity: 0; pointer-events: none;
+  transform: translateY(10px);
+  transition: opacity .25s ease, transform .25s ease;
+}
+.save-toast.show { opacity: 1; pointer-events: auto; transform: translateY(0); }
+.save-toast-icon {
+  width: 28px; height: 28px; border-radius: 50%; background: var(--teal-2);
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px;
+}
+.save-toast-icon svg { width: 14px; height: 14px; stroke: #fff; stroke-width: 2.5; }
+.save-toast-text { flex: 1; font-size: 12.5px; font-weight: 500; line-height: 1.5; }
+.save-toast-text strong { font-weight: 700; display: block; margin-bottom: 1px; font-size: 13px; }
+
+/* ══════════════════════════════════════════
+   ANALYTICS: AI UPDATED BANNER + NEW EPISODE
+══════════════════════════════════════════ */
+.ai-updated-banner {
+  display: none;
+  background: var(--teal-bg); border: 1.5px solid #A7E9D2;
+  border-radius: var(--r-md); padding: 9px 12px; margin-bottom: 10px;
+  align-items: center; gap: 9px;
+  animation: bpop .3s cubic-bezier(.34,1.56,.64,1) both;
+}
+.ai-updated-banner.show { display: flex; }
+.aub-icon {
+  width: 26px; height: 26px; border-radius: 8px; background: rgba(31,144,112,.15);
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+.aub-icon svg { width: 13px; height: 13px; stroke: var(--teal); stroke-width: 2.2; }
+.aub-text { font-size: 12px; font-weight: 600; color: #1D4D3A; line-height: 1.4; }
+.aub-text span { font-weight: 700; color: var(--teal); }
+
+/* New episode item — subtle highlight, no aggressive color */
+.ep-item.ep-new {
+  background: linear-gradient(90deg, rgba(79,110,245,.04) 0%, transparent 80%);
+  border-left: 3px solid var(--t-шум);
+  animation: bpop .35s .1s cubic-bezier(.34,1.56,.64,1) both;
+}
+.ep-item.ep-new .ep-place { color: var(--ink); }
+
+/* Screen slide-in transition */
+.screen { transition: opacity .22s ease; }
+
+/* ══════════════════════════════════════════
+   AUTH SCREENS (Login + Registration)
+══════════════════════════════════════════ */
+.auth-screen {
+  position: absolute; inset: 0; z-index: 150;
+  background: var(--bg);
+  display: none; flex-direction: column;
+  padding-top: 0;
+}
+.auth-screen.active { display: flex; }
+
+.auth-topbar {
+  height: 56px; padding: 0 18px;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0; background: var(--surface);
+  border-bottom: 1px solid var(--line);
+  position: relative;
+}
+.auth-logo {
+  display: flex; align-items: center; gap: 8px;
+}
+.auth-logo-icon {
+  width: 28px; height: 28px; border-radius: 8px;
+  background: linear-gradient(135deg, var(--teal-2), var(--teal));
+  display: flex; align-items: center; justify-content: center;
+}
+.auth-logo-icon svg { width: 15px; height: 15px; }
+.auth-logo-name { font-size: 16px; font-weight: 700; color: var(--ink); letter-spacing: -.02em; }
+
+.auth-body {
+  flex: 1; overflow-y: auto; padding: 32px 24px 32px;
+  display: flex; flex-direction: column;
+}
+.auth-body::-webkit-scrollbar { display: none; }
+
+.auth-title {
+  font-size: 24px; font-weight: 700; color: var(--ink);
+  letter-spacing: -.025em; margin-bottom: 6px;
+}
+.auth-subtitle {
+  font-size: 13.5px; font-weight: 500; color: var(--ink-3);
+  line-height: 1.5; margin-bottom: 32px;
+}
+
+.auth-field { margin-bottom: 14px; }
+.auth-label {
+  display: block; font-size: 12px; font-weight: 700;
+  color: var(--ink-3); letter-spacing: .04em; text-transform: uppercase;
+  margin-bottom: 7px;
+}
+.auth-input {
+  width: 100%; padding: 12px 14px;
+  background: var(--surface); border: 1.5px solid var(--line);
+  border-radius: var(--r-md); font-family: var(--f); font-size: 14px;
+  font-weight: 500; color: var(--ink); outline: none;
+  transition: border-color .18s, box-shadow .18s;
+  -webkit-appearance: none;
+}
+.auth-input:focus {
+  border-color: var(--teal-2);
+  box-shadow: 0 0 0 3px rgba(45,175,136,.12);
+}
+.auth-input::placeholder { color: var(--ink-4); }
+
+.auth-btn-primary {
+  width: 100%; padding: 14px; border: none;
+  background: var(--teal); border-radius: var(--r-lg);
+  font-family: var(--f); font-size: 14.5px; font-weight: 700;
+  color: #fff; cursor: pointer; text-align: center;
+  box-shadow: 0 4px 16px rgba(31,144,112,.28);
+  transition: background .15s, transform .12s;
+  margin-top: 8px;
+}
+.auth-btn-primary:hover  { background: var(--teal-2); }
+.auth-btn-primary:active { transform: scale(.98); }
+
+.auth-btn-secondary {
+  width: 100%; padding: 13px; border: 1.5px solid var(--line);
+  background: var(--surface); border-radius: var(--r-lg);
+  font-family: var(--f); font-size: 14px; font-weight: 600;
+  color: var(--ink-2); cursor: pointer; text-align: center;
+  transition: background .15s, border-color .15s;
+  margin-top: 10px;
+}
+.auth-btn-secondary:hover { background: var(--line-2); border-color: var(--ink-4); }
+
+.auth-divider {
+  display: flex; align-items: center; gap: 12px;
+  margin: 20px 0;
+}
+.auth-divider-line { flex: 1; height: 1px; background: var(--line); }
+.auth-divider-label { font-size: 11px; font-weight: 600; color: var(--ink-4); white-space: nowrap; }
+
+
+
+/* ─── NOTIFICATIONS OVERLAY ─── */
+.notify-overlay {
+  position: absolute; inset: 0; z-index: 270;
+  background: rgba(15,23,42,.28);
+  display: none; align-items: flex-start; justify-content: center;
+  padding: 78px 14px 14px;
+}
+.notify-overlay.open { display: flex; }
+.notify-card {
+  width: 100%; background: var(--surface); border: 1px solid var(--line);
+  border-radius: 18px; box-shadow: 0 18px 40px rgba(15,23,42,.18);
+  overflow: hidden;
+}
+.notify-head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 14px 12px; border-bottom: 1px solid var(--line);
+}
+.notify-title { font-size: 14px; font-weight: 700; color: var(--ink); }
+.notify-close {
+  width: 30px; height: 30px; border-radius: 50%; border: 1px solid var(--line);
+  background: var(--bg); color: var(--ink-3); cursor: pointer; font-size: 16px;
+}
+.notify-list { padding: 8px 10px 10px; display: flex; flex-direction: column; gap: 8px; }
+.notify-item {
+  display: flex; gap: 10px; align-items: flex-start; padding: 10px 10px;
+  border: 1px solid var(--line); border-radius: 14px; background: var(--bg);
+}
+.notify-icon {
+  width: 32px; height: 32px; border-radius: 10px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center; font-size: 15px;
+}
+.notify-item-title { font-size: 12.5px; font-weight: 700; color: var(--ink); margin-bottom: 2px; }
+.notify-item-body { font-size: 11.5px; font-weight: 500; color: var(--ink-3); line-height: 1.45; }
+.notify-empty {
+  padding: 12px 14px 14px; font-size: 11.5px; color: var(--ink-4);
+  border-top: 1px solid var(--line-2);
+}
+
+</style>
+</head>
+<body>
+
+<div class="outer">
+
+<!-- Навигация демо -->
+<div class="demo-nav">
+  <button data-screen="auth-login" onclick="showAuth('login')">🔐 Login</button>
+  <button class="on" data-screen="home" onclick="goMain('home')">🏠 Home</button>
+  <button data-screen="chat" onclick="go('chat')">💬 Chat</button>
+  <button data-screen="insights" onclick="go('insights')">📅 Journal</button>
+  <button data-screen="learn" onclick="go('learn')">📖 Learning</button>
+  <button data-screen="profile" onclick="go('profile')">👤 Profile</button>
+</div>
+
+<div class="phone">
+  <div class="notch"></div>
+
+
+  <!-- AUTH: ВХОД -->
+  <div class="auth-screen active" id="auth-login">
+    <div class="auth-topbar">
+      <div class="auth-logo">
+        <div class="auth-logo-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.8" stroke-linecap="round">
+            <rect x="3" y="8" width="18" height="11" rx="4"/>
+            <circle cx="9" cy="13.5" r="1.2" fill="white" stroke="none"/>
+            <circle cx="15" cy="13.5" r="1.2" fill="white" stroke="none"/>
+            <path d="M9 17 Q12 18.5 15 17"/>
+            <rect x="10.5" y="5" width="3" height="3.5" rx="1.2"/>
+            <circle cx="12" cy="4.2" r=".9" fill="white" stroke="none"/>
+          </svg>
+        </div>
+        <span class="auth-logo-name">Qushaq</span>
+      </div>
+    </div>
+    <div class="auth-body">
+      <div class="auth-title">Login</div>
+      <div class="auth-subtitle">Welcome back. Sign in to continue.</div>
+      <div class="auth-field">
+        <label class="auth-label">Email</label>
+        <input class="auth-input" id="login-email" type="email" placeholder="example@mail.com" autocomplete="email">
+      </div>
+      <div class="auth-field">
+        <label class="auth-label">Password</label>
+        <input class="auth-input" id="login-password" type="password" placeholder="••••••••" autocomplete="current-password">
+      </div>
+      <button class="auth-btn-primary" onclick="doLogin()">Sign in</button>
+      <div class="auth-divider">
+        <div class="auth-divider-line"></div>
+        <div class="auth-divider-label">or</div>
+        <div class="auth-divider-line"></div>
+      </div>
+      <button class="auth-btn-secondary" onclick="showAuth('register')">Create account</button>
+    </div>
+  </div>
+
+  <!-- AUTH: РЕГИСТРАЦИЯ -->
+  <div class="auth-screen" id="auth-register">
+    <div class="auth-topbar">
+      <div class="auth-logo">
+        <div class="auth-logo-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.8" stroke-linecap="round">
+            <rect x="3" y="8" width="18" height="11" rx="4"/>
+            <circle cx="9" cy="13.5" r="1.2" fill="white" stroke="none"/>
+            <circle cx="15" cy="13.5" r="1.2" fill="white" stroke="none"/>
+            <path d="M9 17 Q12 18.5 15 17"/>
+            <rect x="10.5" y="5" width="3" height="3.5" rx="1.2"/>
+            <circle cx="12" cy="4.2" r=".9" fill="white" stroke="none"/>
+          </svg>
+        </div>
+        <span class="auth-logo-name">Qushaq</span>
+      </div>
+    </div>
+    <div class="auth-body">
+      <div class="auth-title">Sign up</div>
+      <div class="auth-subtitle">Create an account to start tracking situations and getting support.</div>
+      <div class="auth-field">
+        <label class="auth-label">Email</label>
+        <input class="auth-input" id="register-email" type="email" placeholder="example@mail.com" autocomplete="email">
+      </div>
+      <div class="auth-field">
+        <label class="auth-label">Password</label>
+        <input class="auth-input" id="register-password" type="password" placeholder="At least 8 characters" autocomplete="new-password">
+      </div>
+      <button class="auth-btn-primary" onclick="doRegister()">Sign up</button>
+      <div class="auth-divider">
+        <div class="auth-divider-line"></div>
+        <div class="auth-divider-label">or</div>
+        <div class="auth-divider-line"></div>
+      </div>
+      <button class="auth-btn-secondary" onclick="showAuth('login')">Already have an account</button>
+    </div>
+  </div>
+
+  <!-- SPLASH -->
+  <div class="splash" id="splash">
+    <div class="splash-icon">
+      <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.8" stroke-linecap="round">
+        <rect x="3" y="8" width="18" height="11" rx="4"/>
+        <circle cx="9" cy="13.5" r="1.2" fill="white" stroke="none"/>
+        <circle cx="15" cy="13.5" r="1.2" fill="white" stroke="none"/>
+        <path d="M9 17 Q12 18.5 15 17"/>
+        <rect x="10.5" y="5" width="3" height="3.5" rx="1.2"/>
+        <circle cx="12" cy="4.2" r=".9" fill="white" stroke="none"/>
+      </svg>
+    </div>
+    <div class="splash-name">Qushaq</div>
+    <div class="splash-sub">Support for parents</div>
+    <div class="splash-dot"></div>
+  </div>
+
+  <!-- ONBOARDING -->
+  <div class="onboard" id="onboard">
+    <div class="onboard-header">
+      <div class="onboard-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.8" stroke-linecap="round">
+          <rect x="3" y="8" width="18" height="11" rx="4"/>
+          <circle cx="9" cy="13.5" r="1.2" fill="white" stroke="none"/>
+          <circle cx="15" cy="13.5" r="1.2" fill="white" stroke="none"/>
+          <path d="M9 17 Q12 18.5 15 17"/>
+          <rect x="10.5" y="5" width="3" height="3.5" rx="1.2"/>
+          <circle cx="12" cy="4.2" r=".9" fill="white" stroke="none"/>
+        </svg>
+      </div>
+      <div class="onboard-title">Tell us about your child</div>
+      <div class="onboard-sub">To make the guidance more accurate,<br>we need to learn a little about your child</div>
+    </div>
+    <div class="onboard-body">
+
+      <div class="ob-field">
+        <div class="ob-label">Child’s name</div>
+        <input class="ob-input" id="ob-name" type="text" placeholder="For example: Alan">
+      </div>
+
+      <div class="ob-row">
+        <div class="ob-field">
+          <div class="ob-label">Age</div>
+          <input class="ob-input" id="ob-age" type="number" min="1" max="18" placeholder="4">
+        </div>
+        <div class="ob-field">
+          <div class="ob-label">Gender</div>
+          <div class="ob-gender-row">
+            <button class="ob-gender-btn on" id="ob-boy" onclick="setGender('boy')">👦 Boy</button>
+            <button class="ob-gender-btn" id="ob-girl" onclick="setGender('girl')">👧 Girl</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="ob-field">
+        <div class="ob-label">Diagnosis / traits <span style="font-weight:500;text-transform:none;letter-spacing:0;color:var(--ink-4)">(select all that apply)</span></div>
+        <div class="ob-diag-wrap">
+          <div class="ob-diag-chip on" onclick="toggleDiag(this)">ASD / Autism</div>
+          <div class="ob-diag-chip" onclick="toggleDiag(this)">ADHD</div>
+          <div class="ob-diag-chip" onclick="toggleDiag(this)">Speech delay</div>
+          <div class="ob-diag-chip" onclick="toggleDiag(this)">Sensory differences</div>
+          <div class="ob-diag-chip" onclick="toggleDiag(this)">Developmental delay</div>
+          <div class="ob-diag-chip" onclick="toggleDiag(this)">Down syndrome</div>
+          <div class="ob-diag-chip" onclick="toggleDiag(this)">No diagnosis</div>
+          <div class="ob-diag-chip" onclick="toggleDiag(this)">Other</div>
+        </div>
+      </div>
+
+      <div class="ob-note">🔒 Data is stored only on your device and is not shared with third parties.</div>
+
+      <button class="ob-btn" onclick="saveOnboarding()">Get started →</button>
+
+    </div>
+  </div>
+
+  <!-- CRISIS OVERLAY -->
+  <div class="crisis-overlay" id="crisis-overlay">
+    <div style="height:22px; background:#B91C1C; flex-shrink:0;"></div>
+    <div class="crisis-hdr">
+      <div>
+        <div class="crisis-hdr-title">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="2.5" stroke-linecap="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+          <span id="crisis-hdr-name">Child</span> is having a hard moment right now
+        </div>
+        <div class="crisis-hdr-sub">Follow the steps. You can do this.</div>
+      </div>
+      <button class="crisis-close-btn" onclick="closeCrisis()">✕</button>
+    </div>
+    <div class="crisis-body">
+      <div class="crisis-calm-note">🫁 Take a deep breath first. Your calm matters more than any words right now. <span id="crisis-child-name">child</span> can feel it.</div>
+      <div class="crisis-subtitle">Step by step</div>
+      <div class="crisis-step">
+        <div class="crisis-num">1</div>
+        <div>
+          <div class="crisis-step-title">Pause and stay quiet</div>
+          <div class="crisis-step-desc">No questions, explanations, or commands. Silence right now is support, not indifference.</div>
+        </div>
+      </div>
+      <div class="crisis-step">
+        <div class="crisis-num">2</div>
+        <div>
+          <div class="crisis-step-title">Leave the noisy place</div>
+          <div class="crisis-step-desc">Calmly and without rushing, guide your child to a quieter place with fewer people.</div>
+        </div>
+      </div>
+      <div class="crisis-step">
+        <div class="crisis-num">3</div>
+        <div>
+          <div class="crisis-step-title">Get down to your child’s level</div>
+          <div class="crisis-step-desc">Crouch or sit nearby. Do not stand over them. That adds pressure. Just stay close.</div>
+        </div>
+      </div>
+      <div class="crisis-step">
+        <div class="crisis-num">4</div>
+        <div>
+          <div class="crisis-step-title">Offer support and do not rush</div>
+          <div class="crisis-step-desc">Offer headphones, let them lean against a wall, or give them a soft object. Stay quiet. Your presence is already helping.</div>
+        </div>
+      </div>
+      <div class="crisis-step">
+        <div class="crisis-num">5</div>
+        <div>
+          <div class="crisis-step-title">When breathing settles, say their name</div>
+          <div class="crisis-step-desc">Say quietly and calmly: “<span class="crisis-child-name-inline">Child</span>, I’m here.” Once. No rush.</div>
+        </div>
+      </div>
+      <button class="crisis-log-btn" onclick="openLogEpisode()">📝 Log this episode</button>
+      <button class="crisis-gotit-btn" onclick="closeCrisis()">Got it, thanks</button>
+    </div>
+  </div>
+
+
+  <!-- LOG EPISODE OVERLAY -->
+  <div class="log-overlay" id="log-overlay">
+    <div class="log-hdr">
+      <button class="log-back-btn" onclick="closeLogEpisode()" aria-label="Back">
+        <svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+      </button>
+      <span class="log-hdr-title">Add episode</span>
+    </div>
+    <div class="log-body">
+
+      <div class="log-field">
+        <label class="log-label">Date</label>
+        <input class="log-input" id="log-date" type="date">
+      </div>
+
+      <div class="log-field">
+        <label class="log-label">Place</label>
+        <input class="log-input" id="log-place" type="text" placeholder="For example: store, daycare, park…">
+      </div>
+
+      <div class="log-field">
+        <label class="log-label">What happened</label>
+        <textarea class="log-input" id="log-what" rows="3" placeholder="Briefly describe the situation…"></textarea>
+      </div>
+
+      <div class="log-field">
+        <label class="log-label">Possible trigger <span style="font-weight:500;text-transform:none;letter-spacing:0;color:var(--ink-4)">(optional)</span></label>
+        <input class="log-input" id="log-trigger" type="text" placeholder="Or choose below…">
+        <div class="log-tags" id="log-tags">
+          <span class="log-tag" onclick="selectTag(this,'Loud noise')">🔊 Loud noise</span>
+          <span class="log-tag" onclick="selectTag(this,'Change of environment')">🔄 Change of environment</span>
+          <span class="log-tag" onclick="selectTag(this,'Crowded place')">👥 Crowded place</span>
+          <span class="log-tag" onclick="selectTag(this,'Fatigue')">😴 Fatigue</span>
+          <span class="log-tag" onclick="selectTag(this,'Transition between activities')">⏩ Transition between activities</span>
+          <span class="log-tag" onclick="selectTag(this,'Bright light')">💡 Bright light</span>
+        </div>
+      </div>
+
+      <div class="log-actions">
+        <button class="log-save-btn" onclick="saveEpisode()">Save episode</button>
+        <button class="log-cancel-btn" onclick="closeLogEpisode()">Cancel</button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- SAVE TOAST -->
+  <div class="save-toast" id="save-toast">
+    <div class="save-toast-icon">
+      <svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+    </div>
+    <div class="save-toast-text">
+      <strong>Episode saved</strong>
+      I’ll use this to improve the insights.
+    </div>
+  </div>
+
+
+
+  <!-- NOTIFICATIONS OVERLAY -->
+  <div class="notify-overlay" id="notify-overlay" onclick="closeNotifications(event)">
+    <div class="notify-card" onclick="event.stopPropagation()">
+      <div class="notify-head">
+        <div class="notify-title">Notifications</div>
+        <button class="notify-close" onclick="closeNotifications()">✕</button>
+      </div>
+      <div class="notify-list">
+        <div class="notify-item">
+          <div class="notify-icon" style="background:var(--purple-bg);">🔔</div>
+          <div>
+            <div class="notify-item-title" id="notif-title-1">New note about your child</div>
+            <div class="notify-item-body" id="notif-body-1">Check the latest specialist note and the updated pattern for noisy places.</div>
+          </div>
+        </div>
+        <div class="notify-item">
+          <div class="notify-icon" style="background:var(--teal-bg);">📘</div>
+          <div>
+            <div class="notify-item-title" id="notif-title-2">Collection updated</div>
+            <div class="notify-item-body" id="notif-body-2">There are materials in the Learning section based on your latest chat conversation.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ЭКРАН: ГЛАВНАЯ -->
+  <div class="screen active" id="s-home">
+    <div class="sbar">
+      <span class="sbar-time">9:41</span>
+      <div class="sbar-icons">
+        <svg viewBox="0 0 13 10" fill="none"><rect x="0" y="6" width="2.5" height="4" rx=".8" fill="var(--ink)"/><rect x="3.5" y="4" width="2.5" height="6" rx=".8" fill="var(--ink)"/><rect x="7" y="2" width="2.5" height="8" rx=".8" fill="var(--ink)"/><rect x="10.5" y="0" width="2.5" height="10" rx=".8" fill="var(--ink)" opacity=".3"/></svg>
+        <svg viewBox="0 0 16 9" fill="none"><rect x="0" y=".5" width="13" height="8" rx="2" stroke="var(--ink)" stroke-width="1.3"/><rect x="1" y="1.5" width="9" height="6" rx="1.2" fill="var(--ink)"/><path d="M14 3v3" stroke="var(--ink)" stroke-width="1.3" stroke-linecap="round"/></svg>
+      </div>
+    </div>
+    <div class="home-body">
+
+      <!-- Top bar with logo + notification -->
+      <div class="home-topbar">
+        <div class="home-topbar-logo">
+          <div class="home-topbar-logo-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.8" stroke-linecap="round">
+              <rect x="3" y="8" width="18" height="11" rx="4"/>
+              <circle cx="9" cy="13.5" r="1.2" fill="white" stroke="none"/>
+              <circle cx="15" cy="13.5" r="1.2" fill="white" stroke="none"/>
+              <path d="M9 17 Q12 18.5 15 17"/>
+              <rect x="10.5" y="5" width="3" height="3.5" rx="1.2"/>
+              <circle cx="12" cy="4.2" r=".9" fill="white" stroke="none"/>
+            </svg>
+          </div>
+          <span class="home-topbar-name">Qushaq</span>
+        </div>
+        <div class="home-topbar-right">
+          <div class="home-topbar-child" onclick="go('profile')" title="Open profile">
+            <span id="home-child-ava" class="home-child-ava-sm">👦</span>
+            <div class="home-topbar-child-copy">
+              <div class="home-child-name-sm" id="home-child-name">Alan, 4</div>
+              <div class="home-child-sub-sm" id="home-child-sub">ASD Level 2</div>
+            </div>
+            <span class="home-child-change-sm">Edit</span>
+          </div>
+          <div class="home-topbar-notif" onclick="openNotifications()" title="Notifications">
+            <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>
+          </div>
+        </div>
+      </div>
+
+      <!-- Main heading -->
+      <div class="home-heading-wrap">
+        <div class="home-heading">What is happening right now?</div>
+        <div class="home-heading-sub">Choose the right action</div>
+      </div>
+
+      <!-- PRIMARY ACTIONS -->
+      <div class="home-primary-wrap">
+
+        <!-- Crisis — dominant -->
+        <button class="home-crisis-btn" onclick="openCrisis()">
+          <div class="home-crisis-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+          </div>
+          <div class="home-crisis-text">
+            <div class="home-crisis-title">Crisis right now</div>
+            <div class="home-crisis-sub">Step-by-step help</div>
+          </div>
+          <div class="home-crisis-arrow">
+            <svg viewBox="0 0 24 24" fill="none" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+          </div>
+        </button>
+
+        <!-- AI Chat — secondary primary -->
+        <button class="home-chat-btn" onclick="go('chat')">
+          <div class="home-chat-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+          </div>
+          <div class="home-chat-text">
+            <div class="home-chat-title">Describe the situation</div>
+            <div class="home-chat-sub">Describe what is happening and get support</div>
+          </div>
+          <div class="home-chat-arrow"><svg viewBox="0 0 24 24" fill="none" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></div>
+        </button>
+
+      </div>
+
+      <!-- AI НАБЛЮДЕНИЕ -->
+      <div class="home-observe-card" id="home-observe-card">
+        <div class="home-observe-header">
+          <div class="home-observe-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+          </div>
+                    <span class="home-observe-title">Observed</span>
+        </div>
+        <div class="home-observe-text" id="home-observe-text">Not enough data for observations yet</div>
+        <button class="home-observe-btn" id="home-observe-btn" onclick="go('insights')" style="display:none;">Open insights</button>
+      </div>
+
+      <!-- ПОСЛЕДНИЙ ЭПИЗОД -->
+      <div class="home-last-ep" id="home-last-ep" style="display:none; margin: 14px 18px 0;">
+        <div class="home-last-ep-header">
+          <span class="home-last-ep-title">Latest episode</span>
+          <span class="home-last-ep-badge">📋</span>
+        </div>
+        <div class="home-last-ep-text" id="home-last-ep-text">No data yet</div>
+        <button class="home-last-ep-btn" id="home-last-ep-btn" onclick="repeatLastEpisode()" style="display:none;">
+          View guidance again →
+        </button>
+      </div>
+
+      <!-- Divider -->
+      <div class="home-divider" style="margin-top:14px;">
+        <div class="home-divider-line"></div>
+      </div>
+
+      <!-- SECONDARY ACTIONS (compact) -->
+      <div class="home-secondary-wrap">
+
+        <div class="home-sec-btn" onclick="go('insights')">
+          <div class="home-sec-icon" style="background:var(--blue-bg)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="var(--blue)" stroke-width="2" stroke-linecap="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+          </div>
+          <div style="flex:1">
+            <div class="home-sec-title">History and patterns</div>
+            <div class="home-sec-sub">Episodes over the last 30 days</div>
+          </div>
+          <div class="home-sec-arrow"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><polyline points="9 18 15 12 9 6"/></svg></div>
+        </div>
+
+      </div>
+      <!-- end secondary -->
+
+    </div><!-- end home-body -->
+  </div><!-- end s-home -->
+
+  <!-- ЭКРАН: ЧАТ -->
+  <div class="screen" id="s-chat">
+    <div class="chat-sticky">
+      <div class="sbar">
+        <span class="sbar-time">9:41</span>
+        <div class="sbar-icons">
+          <svg viewBox="0 0 13 10" fill="none"><rect x="0" y="6" width="2.5" height="4" rx=".8" fill="var(--ink)"/><rect x="3.5" y="4" width="2.5" height="6" rx=".8" fill="var(--ink)"/><rect x="7" y="2" width="2.5" height="8" rx=".8" fill="var(--ink)"/><rect x="10.5" y="0" width="2.5" height="10" rx=".8" fill="var(--ink)" opacity=".3"/></svg>
+          <svg viewBox="0 0 16 9" fill="none"><rect x="0" y=".5" width="13" height="8" rx="2" stroke="var(--ink)" stroke-width="1.3"/><rect x="1" y="1.5" width="9" height="6" rx="1.2" fill="var(--ink)"/><path d="M14 3v3" stroke="var(--ink)" stroke-width="1.3" stroke-linecap="round"/></svg>
+        </div>
+      </div>
+      <div class="chat-header">
+        <div class="chat-header-left">
+          <div class="ai-avatar">
+            <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.8" stroke-linecap="round">
+              <rect x="3" y="8" width="18" height="11" rx="4"/>
+              <circle cx="9" cy="13.5" r="1.2" fill="white" stroke="none"/>
+              <circle cx="15" cy="13.5" r="1.2" fill="white" stroke="none"/>
+              <path d="M9 17 Q12 18.5 15 17"/>
+              <rect x="10.5" y="5" width="3" height="3.5" rx="1.2"/>
+              <circle cx="12" cy="4.2" r=".9" fill="white" stroke="none"/>
+            </svg>
+          </div>
+          <div>
+            <div class="ai-title">Qushaq AI</div>
+            <div class="ai-sub">Online</div>
+          </div>
+        </div>
+        <div class="ctx-pill" onclick="go('profile')" title="Open profile">
+          <span class="ctx-emoji" id="ctx-emoji">👦</span>
+          <div class="ctx-pill-copy"><span class="ctx-name" id="ctx-name">Alan, 4</span><span class="ctx-tag" id="ctx-tag">Sensory · ASD</span></div>
+        </div>
+        <button class="clear-chat-btn" onclick="clearChat()" title="Clear chat">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <div class="msgs-scroll" id="msgs-wrap">
+      <div class="msgs" id="msgs">
+
+        <!-- AI greeting — first message -->
+        <div class="msg-time-label" id="chat-time-label">Today · 9:41</div>
+        <div class="msg-row">
+          <div class="msg-av">
+            <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="8" width="18" height="11" rx="4"/><circle cx="9" cy="13.5" r="1.2" fill="white" stroke="none"/><circle cx="15" cy="13.5" r="1.2" fill="white" stroke="none"/><path d="M9 17 Q12 18.5 15 17"/><rect x="10.5" y="5" width="3" height="3.5" rx="1.2"/><circle cx="12" cy="4.2" r=".9" fill="white" stroke="none"/></svg>
+          </div>
+          <div class="bubble ai">Hi! I’ll help you understand what is happening with your child and suggest what to do right now. Describe the situation.</div>
+        </div>
+        <div class="msg-meta"><span class="msg-meta-time">9:41</span></div>
+
+      </div>
+    </div>
+
+    <div class="input-bar">
+      <div class="chips-bar" id="chips-suggestions">
+        <button class="chip" onclick="addChip(this)">Transitions</button>
+        <button class="chip" onclick="addChip(this)">Sleep</button>
+        <button class="chip" onclick="addChip(this)">Meltdown</button>
+        <button class="chip" onclick="addChip(this)">Hits head</button>
+        <button class="chip" onclick="addChip(this)">Not listening</button>
+        <button class="chip" onclick="addChip(this)">Eating</button>
+      </div>
+      <div class="input-row">
+        <div class="input-wrap">
+        <svg class="input-icon" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" stroke="currentColor"/></svg>
+        <input class="chat-input" id="ci" type="text" placeholder="Describe what is happening right now" onkeydown="if(event.key==='Enter')send()">
+      </div><!-- input-wrap -->
+      <button class="send-btn" onclick="send()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="22" y1="2" x2="11" y2="13"/>
+          <polygon points="22 2 15 22 11 13 2 9 22 2" fill="white" stroke="none"/>
+        </svg>
+      </button>
+      </div><!-- input-row -->
+    </div>
+  </div>
+
+  <!-- ЭКРАН: ДНЕВНИК -->
+  <div class="screen" id="s-insights">
+    <div class="sbar"><span class="sbar-time">9:41</span></div>
+    <div class="screen-hdr"><h2 id="diary-title">Alan’s Journal</h2><p>Observed patterns · last 14 days</p></div>
+    <div class="scroll-y" style="padding: 0 15px 22px;">
+            <div class="sec-label">Observed</div>
+      <div class="ai-updated-banner" id="ai-updated-banner">
+        <div class="aub-icon"><svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-.18-5.61"/></svg></div>
+        <div class="aub-text"><span>Insights updated</span> A new episode from crisis mode was added.</div>
+      </div>
+      <div class="pattern-card">
+        <div class="pattern-card-head">
+          <div class="pattern-card-icon"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></div>
+          <div><div class="pattern-card-title" id="pattern-card-title">Difficult moments due to noise</div></div>
+        </div>
+        <div class="pattern-card-body" id="pattern-card-body"><strong style="color:var(--ink)">3 out of 5 episodes</strong> happened in noisy places. A frequent trigger is <strong style="color:var(--ink)">sudden noise</strong>.</div>
+        <div class="ep-chart" id="ep-chart">
+          <div class="ep-bar-wrap"><div class="ep-bar-outer"><div class="ep-bar-fill cat-сенс" style="height:85%"></div></div><div class="ep-bar-date">Mar 9</div></div>
+          <div class="ep-bar-wrap"><div class="ep-bar-outer"><div class="ep-bar-fill cat-none" style="height:20%"></div></div><div class="ep-bar-date">Mar 10</div></div>
+          <div class="ep-bar-wrap"><div class="ep-bar-outer"><div class="ep-bar-fill cat-none" style="height:15%"></div></div><div class="ep-bar-date">Mar 11</div></div>
+          <div class="ep-bar-wrap"><div class="ep-bar-outer"><div class="ep-bar-fill cat-environment" style="height:55%"></div></div><div class="ep-bar-date">Mar 12</div></div>
+          <div class="ep-bar-wrap"><div class="ep-bar-outer"><div class="ep-bar-fill cat-none" style="height:10%"></div></div><div class="ep-bar-date">Mar 13</div></div>
+          <div class="ep-bar-wrap"><div class="ep-bar-outer"><div class="ep-bar-fill cat-transition" style="height:25%"></div></div><div class="ep-bar-date">Mar 14</div></div>
+          <div class="ep-bar-wrap"><div class="ep-bar-outer"><div class="ep-bar-fill cat-сенс" style="height:90%"></div></div><div class="ep-bar-date">Mar 16</div></div>
+        </div>
+        <div class="ep-legend" id="ep-legend">
+          <div class="ep-legend-item"><div class="ep-legend-dot" style="background:var(--cat-сенс)"></div>sensory</div>
+          <div class="ep-legend-item"><div class="ep-legend-dot" style="background:var(--cat-environment)"></div>environment</div>
+          <div class="ep-legend-item"><div class="ep-legend-dot" style="background:var(--cat-transition)"></div>transition</div>
+          <div class="ep-legend-item"><div class="ep-legend-dot" style="background:var(--cat-сост)"></div>state</div>
+          <div class="ep-legend-item"><div class="ep-legend-dot" style="background:var(--cat-none)"></div>undefined</div>
+        </div>
+      </div>
+      <div class="sec-label">Latest episodes</div>
+      <div class="episode-card" id="episode-card">
+        <div class="ep-item">
+          <div class="ep-date"><div class="ep-date-day">16</div><div class="ep-date-month">Mar</div></div>
+          <div class="ep-dot-line"><div class="ep-dot cat-сенс"></div><div class="ep-line"></div></div>
+          <div><div class="ep-place">Supermarket</div><div class="ep-behavior">Head hitting, crying, lay on the floor · 12 min</div><div class="ep-trigger cat-сенс"><svg viewBox="0 0 24 24" fill="none" stroke-width="2.5" stroke-linecap="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>Loud announcement</div></div>
+        </div>
+        <div class="ep-item">
+          <div class="ep-date"><div class="ep-date-day">12</div><div class="ep-date-month">Mar</div></div>
+          <div class="ep-dot-line"><div class="ep-dot cat-environment"></div><div class="ep-line"></div></div>
+          <div><div class="ep-place">Birthday party</div><div class="ep-behavior">Covered ears, walked away, rocked · 7 min</div><div class="ep-trigger cat-environment"><svg viewBox="0 0 24 24" fill="none" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>Voices and music</div></div>
+        </div>
+        <div class="ep-item">
+          <div class="ep-date"><div class="ep-date-day">9</div><div class="ep-date-month">Mar</div></div>
+          <div class="ep-dot-line"><div class="ep-dot cat-сенс"></div><div class="ep-line"></div></div>
+          <div><div class="ep-place">Mall food court</div><div class="ep-behavior">Severe distress, refused to move · 15 min</div><div class="ep-trigger cat-сенс"><svg viewBox="0 0 24 24" fill="none" stroke-width="2.5" stroke-linecap="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>Noise and music</div></div>
+        </div>
+        <div class="ep-item">
+          <div class="ep-date"><div class="ep-date-day">5</div><div class="ep-date-month">Mar</div></div>
+          <div class="ep-dot-line"><div class="ep-dot cat-transition"></div><div class="ep-line"></div></div>
+          <div><div class="ep-place">Morning before daycare</div><div class="ep-behavior">Cried, refused to put on shoes · 20 min</div><div class="ep-trigger cat-transition"><svg viewBox="0 0 24 24" fill="none" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>Unannounced transition</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ЭКРАН: РАБОТА -->
+  <div class="screen" id="s-work">
+    <div class="sbar"><span class="sbar-time">9:41</span></div>
+    <div class="work-screen">
+      <div class="work-topbar">
+        <div class="work-brand">WorkField</div>
+        <button class="work-bag" type="button" aria-label="Work bag">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M8 7V6a4 4 0 0 1 8 0v1"/>
+            <path d="M5 8h14v10a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V8Z"/>
+            <circle cx="18" cy="18" r="3.2"/>
+            <path d="M18 16.7v1.6l1.1.7"/>
+          </svg>
+        </button>
+      </div>
+      <div class="work-subtitle">Available flexible jobs</div>
+      <div class="work-tabs" id="work-tabs">
+        <button class="work-tab active" type="button" data-tab="all">All</button>
+        <button class="work-tab" type="button" data-tab="others">Other</button>
+        <button class="work-tab" type="button" data-tab="my">Mine</button>
+      </div>
+      <div id="work-list"></div>
+      <div class="work-empty" id="work-empty">Nothing here yet.</div>
+    </div>
+
+    <div class="work-detail" id="work-detail-overlay">
+      <div class="work-detail-top">
+        <button class="work-detail-back" type="button" onclick="closeWorkDetails()" aria-label="Back">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M15 18l-6-6 6-6"/>
+          </svg>
+        </button>
+        <div class="work-detail-title">Details</div>
+      </div>
+      <div class="work-detail-body">
+        <div class="work-detail-label" >Payment</div>
+        <div class="work-detail-amount" id="work-detail-amount">16,000 tenge</div>
+
+        <div class="work-detail-grid">
+          <div>
+            <div class="work-detail-meta-label">Date:</div>
+            <div class="work-detail-meta-value" id="work-detail-date">May 30, 2023</div>
+          </div>
+          <div>
+            <div class="work-detail-meta-label">Order ID #:</div>
+            <div class="work-detail-meta-value" id="work-detail-code">5242124422</div>
+          </div>
+        </div>
+
+        <div class="work-detail-block-title">Description</div>
+        <div class="work-detail-desc" id="work-detail-description">English tutor needed for a 7-year-old boy, three times a week, payment after each lesson, Pre-Intermediate level, preferred time: 10:00.</div>
+
+        <div class="work-detail-meta-label" style="margin-bottom:10px;">Client information</div>
+        <div class="work-customer-card">
+          <img class="work-customer-avatar" id="work-detail-avatar" src="" alt="Customer avatar">
+          <div>
+            <div class="work-customer-name" id="work-detail-customer">Sasha Trusova</div>
+            <div class="work-customer-phone" id="work-detail-phone">+7 7757264894</div>
+          </div>
+        </div>
+
+        <div class="work-detail-grid">
+          <div>
+            <div class="work-detail-meta-label">City</div>
+            <div class="work-detail-meta-value" id="work-detail-city">Aktobe</div>
+          </div>
+          <div>
+            <div class="work-detail-meta-label">Client since</div>
+            <div class="work-detail-meta-value" id="work-detail-since">May 30, 2021</div>
+          </div>
+        </div>
+
+        <div class="work-detail-actions">
+          <button class="work-detail-ghost" type="button">
+            <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="M5 12h14"/></svg>
+            Share
+          </button>
+          <button class="work-detail-ghost" type="button">
+            <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 1 1 3 3L7 19l-4 1 1-4 12.5-12.5Z"/></svg>
+            Message worker
+          </button>
+        </div>
+
+        <button class="work-detail-claim" type="button">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+          Take job
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ЭКРАН: УЧЁБА -->
+  <div class="screen" id="s-learn">
+    <div class="sbar"><span class="sbar-time">9:41</span></div>
+    <div class="screen-hdr"><h2>Tips and resources</h2><p>Short guides for parents · evidence-informed approach</p></div>
+    <div class="scroll-y" style="padding: 0 15px 22px;">
+      <div class="sec-label">Recommended for you</div>
+      <div id="learn-recommend-note" style="font-size:12px;font-weight:500;color:var(--ink-4);line-height:1.5;margin:-2px 0 10px;">Based on your chat</div>
+      <div id="learn-recommended-list"></div>
+      <div class="sec-label">All topics</div>
+      <div id="learn-all-list"></div>
+    </div>
+  </div>
+
+  <!-- ЭКРАН: ПРОФИЛЬ -->
+  <div class="screen" id="s-profile">
+    <div class="sbar"><span class="sbar-time">9:41</span></div>
+    <div class="scroll-y" style="padding:0">
+      <div class="profile-hero">
+        <div class="child-avatar" id="profile-avatar">👦</div>
+        <div class="profile-name" id="profile-name">Alan M.</div>
+        <div class="profile-sub" id="profile-sub">4 years old · Almaty, Kazakhstan</div>
+        <div class="profile-tags" id="profile-tags">
+          <span class="ptag green">Autism, Level 2</span>
+          <span class="ptag red">Sensory sensitivity</span>
+          <span class="ptag blue">Occupational therapy</span>
+          <span class="ptag amber">8 weeks</span>
+        </div>
+        <button class="edit-child-btn" onclick="openOnboarding()">✏️ Edit child details</button>
+        <button class="edit-child-btn" onclick="logout()" style="color:var(--ink-4); border-color:var(--line); background:transparent; font-weight:500; padding-left:16px; padding-right:16px;">↩️ Log out</button>
+      </div>
+      <div style="padding: 15px 15px 26px;">
+        <div class="profile-mom-label">For mom</div>
+        <div class="profile-mom-list">
+          <div class="home-sec-btn" onclick="window.open('https://www.instagram.com/mamapro_almaty?igsh=MW0wYm9sdmcya296Yw==', '_blank', 'noopener')">
+            <div class="home-sec-icon" style="background:linear-gradient(135deg, #FDF497 0%, #FD5949 45%, #D6249F 75%, #285AEB 100%)">
+              <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg>
+            </div>
+            <div style="flex:1">
+              <div class="home-sec-title">MamaPro Almaty</div>
+              <div class="home-sec-sub">Community and crowdfunding</div>
+            </div>
+            <div class="home-sec-arrow"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><polyline points="9 18 15 12 9 6"/></svg></div>
+          </div>
+          <div class="home-sec-btn" onclick="go('work')">
+            <div class="home-sec-icon" style="background:var(--amber-bg)">
+              <svg viewBox="0 0 24 24" fill="none" stroke="var(--amber)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v2"/></svg>
+            </div>
+            <div style="flex:1">
+              <div class="home-sec-title">Flexible work</div>
+              <div class="home-sec-sub">Flexible schedule near you</div>
+            </div>
+            <div class="home-sec-arrow"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><polyline points="9 18 15 12 9 6"/></svg></div>
+          </div>
+        </div>
+        <div class="sec-label">Progress</div>
+        <div class="stat-grid">
+          <div class="stat-card"><div class="stat-icon-wrap" style="background:var(--teal-bg)"><svg viewBox="0 0 24 24" fill="none" stroke="var(--teal)" stroke-width="2.2" stroke-linecap="round"><path d="M12 20V10M6 20V14M18 20V6"/></svg></div><div class="stat-value">8</div><div class="stat-label">weeks</div><div class="stat-note">in program</div></div>
+          <div class="stat-card"><div class="stat-icon-wrap" style="background:var(--blue-bg)"><svg viewBox="0 0 24 24" fill="none" stroke="var(--blue)" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15.5 15.5"/></svg></div><div class="stat-value">2</div><div class="stat-label">sessions per week</div><div class="stat-note">next: Tuesday</div></div>
+        </div>
+        <div class="sec-label">What is improving</div>
+        <div class="prog-item"><div class="prog-head"><span class="prog-name">Self-regulation</span><span class="prog-badge">good</span></div><div class="prog-track"><div class="prog-fill" style="width:44%"></div></div></div>
+        <div class="prog-item"><div class="prog-head"><span class="prog-name">Asking for help</span><span class="prog-badge">stable</span></div><div class="prog-track"><div class="prog-fill" style="width:38%"></div></div></div>
+        <div class="prog-item"><div class="prog-head"><span class="prog-name">Transitions</span><span class="prog-badge">emerging</span></div><div class="prog-track"><div class="prog-fill" style="width:30%"></div></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- НИЖНЯЯ НАВИГАЦИЯ -->
+  <div class="nav">
+    <div class="ni on" id="ni-home" onclick="go('home')">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+      <span class="ni-label">Home</span><div class="ni-pip"></div>
+    </div>
+    <div class="ni" id="ni-chat" onclick="go('chat')">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+      <span class="ni-label">Chat</span><div class="ni-pip"></div>
+    </div>
+    <div class="ni" id="ni-insights" onclick="go('insights')">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+      <span class="ni-label">Journal</span><div class="ni-pip"></div>
+    </div>
+    <div class="ni" id="ni-learn" onclick="go('learn')">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z"/><path d="M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z"/></svg>
+      <span class="ni-label">Learning</span><div class="ni-pip"></div>
+    </div>
+    <div class="ni" id="ni-profile" onclick="go('profile')">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+      <span class="ni-label">Profile</span><div class="ni-pip"></div>
+    </div>
+  </div>
+
+  <!-- IN-APP ARTICLE VIEWER -->
+  <div class="article-overlay" id="article-overlay">
+    <div class="article-topbar">
+      <button class="article-back-btn" onclick="closeArticle()">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+        Back
+      </button>
+      <div class="article-topbar-title" id="article-topbar-title"></div>
+      <div style="width:60px"></div>
+    </div>
+    <div class="article-loader" id="article-loader">
+      <div class="article-spinner"></div>
+      <span>Loading article…</span>
+    </div>
+    <iframe id="article-iframe" class="article-iframe" src="" onload="hideArticleLoader()"></iframe>
+  </div>
+
+</div><!-- /.phone -->
+</div><!-- /.outer -->
+
+<script>
+/* ── Splash ── */
+let appBooted = false;
+
+function bootApp() {
+  if (appBooted) return;
+  appBooted = true;
+
+  const splashEl = document.getElementById('splash');
+  if (splashEl) splashEl.classList.add('hidden');
+
+  const homeEl = document.getElementById('s-home');
+  if (homeEl) homeEl.classList.remove('active');
+
+  const childData = loadChildData();
+  if (childData) applyChildData(childData);
+
+  renderAllArticles();
+  renderRecommendedArticles(getRecommendationProfile() || extractRecommendationProfileFromChat());
+  showAuth('register');
+
+  const w = document.getElementById('msgs-wrap');
+  if (w) w.scrollTop = 99999;
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  setTimeout(bootApp, 1200);
+});
+
+window.addEventListener('load', () => {
+  setTimeout(bootApp, 1200);
+});
+
+setTimeout(bootApp, 2500);
+
+/* ── Onboarding ── */
+let selectedGender = 'boy';
+
+function setGender(g) {
+  selectedGender = g;
+  document.getElementById('ob-boy').classList.toggle('on', g === 'boy');
+  document.getElementById('ob-girl').classList.toggle('on', g === 'girl');
+}
+
+function toggleDiag(el) {
+  el.classList.toggle('on');
+}
+
+function openOnboarding() {
+  // Pre-fill with existing data if available
+  const data = loadChildData();
+  if (data) {
+    document.getElementById('ob-name').value = data.name || '';
+    document.getElementById('ob-age').value  = data.age  || '';
+    setGender(data.gender || 'boy');
+    // Reset chips then re-select saved ones
+    document.querySelectorAll('.ob-diag-chip').forEach(c => c.classList.remove('on'));
+    if (data.diagnosis) {
+      const saved = data.diagnosis.split(',').map(d => d.trim().toLowerCase());
+      document.querySelectorAll('.ob-diag-chip').forEach(c => {
+        if (saved.includes(c.textContent.trim().toLowerCase())) c.classList.add('on');
+      });
+    }
+  }
+  document.getElementById('onboard').classList.add('active');
+  renderRecommendedArticles(null);
+}
+
+function saveOnboarding() {
+  const name = document.getElementById('ob-name').value.trim() || 'Child';
+  const age  = document.getElementById('ob-age').value.trim() || '?';
+  const diags = [...document.querySelectorAll('.ob-diag-chip.on')].map(c => c.textContent.trim());
+  const diagStr = diags.length ? diags.join(', ') : 'not specified';
+
+  const isEdit = !!loadChildData(); // editing existing data
+  const data = { name, age, gender: selectedGender, diagnosis: diagStr };
+  localStorage.setItem('qushaq_child', JSON.stringify(data));
+
+  document.getElementById('onboard').classList.remove('active');
+
+  if (isEdit) {
+    go('profile'); // return to profile if editing
+  } else {
+    goMain('home'); // first time — go to app
+  }
+
+  setTimeout(() => applyChildData(data), 50);
+}
+
+function loadChildData() {
+  try {
+    const raw = localStorage.getItem('qushaq_child');
+    return raw ? JSON.parse(raw) : null;
+  } catch(e) { return null; }
+}
+
+function applyChildData(data) {
+  const name = data.name || 'Child';
+  const age  = data.age  || '?';
+  const gender = data.gender || 'boy';
+  const diag = data.diagnosis || '';
+  const ava  = gender === 'girl' ? '👧' : '👦';
+  const ageStr = `${age} ${ageWord(+age)}`;
+
+  // Home topbar child info
+  const homeAva = document.getElementById('home-child-ava');
+  if (homeAva) homeAva.textContent = ava;
+  const nameEl = document.getElementById('home-child-name');
+  if (nameEl) nameEl.textContent = `${name}, ${age}`;
+  const subEl = document.getElementById('home-child-sub');
+  if (subEl) subEl.textContent = diag;
+
+  // Crisis overlay — dynamic name
+  const crisisHdrName = document.getElementById('crisis-hdr-name');
+  if (crisisHdrName) crisisHdrName.textContent = name;
+  const crisisChildName = document.getElementById('crisis-child-name');
+  if (crisisChildName) crisisChildName.textContent = name;
+  document.querySelectorAll('.crisis-child-name-inline').forEach(el => el.textContent = name);
+
+  // Crisis sub
+  const crisisSub = document.querySelector('.home-crisis-sub');
+  if (crisisSub) crisisSub.textContent = `Step-by-step actions for ${name}`;
+
+  // Chat context pill
+  const ctxName = document.getElementById('ctx-name');
+  if (ctxName) ctxName.textContent = `${name}, ${age}`;
+  const ctxTag = document.getElementById('ctx-tag');
+  if (ctxTag) ctxTag.textContent = diag;
+  const ctxEmoji = document.getElementById('ctx-emoji');
+  if (ctxEmoji) ctxEmoji.textContent = ava;
+
+  // Chat input placeholder
+  const ci = document.getElementById('ci');
+  if (ci) ci.placeholder = 'Describe what is happening right now';
+
+  // Diary title
+  const diaryTitle = document.getElementById('diary-title');
+  if (diaryTitle) diaryTitle.textContent = `Journal ${name}`;
+
+  // Profile
+  const profileAva = document.getElementById('profile-avatar');
+  if (profileAva) profileAva.textContent = ava;
+  const profileName = document.getElementById('profile-name');
+  if (profileName) profileName.textContent = `${name}`;
+  const profileSub = document.getElementById('profile-sub');
+  if (profileSub) profileSub.textContent = `${ageStr}`;
+  const profileTags = document.getElementById('profile-tags');
+  if (profileTags) {
+    // Split diagnoses into individual tags
+    const tags = diag.split(',').map(d => d.trim()).filter(Boolean);
+    const colors = ['green','red','blue','amber','purple'];
+    profileTags.innerHTML = tags.map((t, i) =>
+      `<span class="ptag ${colors[i % colors.length]}">${t}</span>`
+    ).join('');
+  }
+
+  const therapistNoteBody = document.getElementById('therapist-note-body');
+  if (therapistNoteBody) {
+    const askedWord = gender === 'girl' ? 'asked for them on her own' : 'asked for them on his own';
+    const pronoun = gender === 'girl' ? 'She' : 'He';
+    therapistNoteBody.textContent = `${name} ${askedWord} headphones without prompting. ${pronoun} is noticing overload more often before a crisis begins.`;
+  }
+
+  const notifTitle1 = document.getElementById('notif-title-1');
+  if (notifTitle1) notifTitle1.textContent = `New note about ${name}`;
+  const notifBody1 = document.getElementById('notif-body-1');
+  if (notifBody1) notifBody1.textContent = `A new specialist note and updated pattern for ${name} are available.`;
+
+  // Update system prompt
+  updateSystemPrompt(data);
+  renderRecommendedArticles(getRecommendationProfile() || extractRecommendationProfileFromChat());
+}
+
+
+function openNotifications() {
+  const overlay = document.getElementById('notify-overlay');
+  if (overlay) overlay.classList.add('open');
+}
+
+function closeNotifications(event) {
+  if (event && event.target && event.target.id !== 'notify-overlay') return;
+  const overlay = document.getElementById('notify-overlay');
+  if (overlay) overlay.classList.remove('open');
+}
+
+function ageWord(n) {
+  if (n >= 11 && n <= 14) return 'years';
+  const last = n % 10;
+  if (last === 1) return 'year';
+  if (last >= 2 && last <= 4) return 'years';
+  return 'years';
+}
+
+function updateSystemPrompt(data) {
+  CHILD_CONTEXT = `Child information: name — ${data.name}, age — ${data.age} years, gender — ${data.gender}, diagnosis/traits — ${data.diagnosis}. Address the child by name in your replies.`;
+}
+
+
+const USERS_KEY = 'qushaq_users';
+const CURRENT_USER_KEY = 'currentUser';
+const RECOMMENDATION_PROFILE_KEY = 'qushaq_recommendation_profile';
+
+const ARTICLE_LIBRARY = [
+  {
+    id: 'sensory_sound_light',
+    title: 'Why children get overwhelmed by sound and light',
+    description: 'What happens to a child during intense overload and why it is not “bad behavior.”',
+    category: 'Sensory',
+    accent: 'teal',
+    time: '4 мин',
+    badge: 'New',
+    badgeClass: 'new',
+    url: 'https://pedsovet.org/article/cto-takoe-sensornaa-peregruzka-u-detej-i-kak-s-nej-rabotat',
+    tags: ['сенсорика', 'звук', 'шум', 'свет', 'перегрузка', 'крик'],
+    triggers: ['шум', 'громкий звук', 'яркий свет'],
+    goals: ['успокоить', 'снизить срывы'],
+    diagnoses: ['рас / аутизм', 'сенсорные нарушения', 'сдвг'],
+    ageMin: 2,
+    ageMax: 10,
+    priority: 8
+  },
+  {
+    id: 'transitions_switching',
+    title: 'How to help a child transition between activities',
+    description: 'Practical ways to reduce meltdowns during transitions.',
+    category: 'Transitions',
+    accent: 'amber',
+    time: '5 мин',
+    url: 'https://moaplaneta.com/%D0%B3%D1%80%D0%B0%D0%BD%D1%82%D1%8B/%D0%B3%D1%80%D0%B0%D0%BD%D1%82%D1%8B-%D0%BA%D1%83%D0%B1%D0%B0%D0%BD%D0%B8/%D0%BD%D0%B0%D0%B2%D1%8B%D0%BA-%D0%BF%D0%B5%D1%80%D0%B5%D1%85%D0%BE%D0%B4%D0%BE%D0%B2-%D0%BC%D0%B5%D0%B6%D0%B4%D1%83-%D0%B7%D0%B0%D0%BD%D1%8F%D1%82%D0%B8%D1%8F%D0%BC%D0%B8-%D1%83-%D0%B4%D0%B5%D1%82/#:~:text=%D0%9D%D0%B0%D1%87%D0%BD%D0%B8%D1%82%D0%B5%20%D1%81%20%D0%BC%D0%B0%D0%BB%D0%BE%D0%B3%D0%BE:%20%D0%B2%D0%B2%D0%B5%D0%B4%D0%B8%D1%82%D0%B5%20%D0%B2,%D1%81%20%D0%BD%D0%B5%D0%BF%D1%80%D0%B5%D0%B4%D1%81%D0%BA%D0%B0%D0%B7%D1%83%D0%B5%D0%BC%D0%BE%D1%81%D1%82%D1%8C%D1%8E%20%D1%8D%D1%82%D0%BE%D0%B3%D0%BE%20%D0%B1%D0%BE%D0%BB%D1%8C%D1%88%D0%BE%D0%B3%D0%BE%20%D0%BC%D0%B8%D1%80%D0%B0.',
+    tags: ['transitions', 'смена', 'переключение', 'распорядок', 'истерика'],
+    triggers: ['transition between activities', 'смена обстановки'],
+    goals: ['подгOTовить', 'переключить'],
+    diagnoses: ['рас / аутизм', 'сдвг'],
+    ageMin: 2,
+    ageMax: 9,
+    priority: 7
+  },
+  {
+    id: 'self_harm_head_banging',
+    title: 'Why children hit their head in difficult moments',
+    description: 'What it can mean and how to respond calmly and safely.',
+    category: 'Behavior',
+    accent: 'red',
+    time: '6 мин',
+    badge: 'Saved',
+    badgeClass: 'saved',
+    url: 'https://letidor.ru/psihologiya/plokhoe-vospitanie-ili-nervnoe-rasstroistvo-chto-delat-esli-rebenok-betsya-golovoi-o-stenu.htm',
+    tags: ['поведение', 'бьется головой', 'самоповреждение', 'срыв'],
+    triggers: ['перегрузка', 'стресс'],
+    goals: ['безопасность', 'успокоить'],
+    diagnoses: ['рас / аутизм', 'сдвг'],
+    ageMin: 2,
+    ageMax: 12,
+    priority: 8
+  },
+  {
+    id: 'communication_break_request',
+    title: 'Teach your child to ask for a break',
+    description: 'A simple gesture or card can help a child ask for help before a crisis.',
+    category: 'Communication',
+    accent: 'blue',
+    time: '4 мин',
+    url: 'https://autismjournal.help/articles/kak-navyk-prosby-o-pereryve-mozhet-uluchshit-povedenie-rebenka',
+    tags: ['communication', 'ask for help', 'перерыв', 'карточка'],
+    triggers: ['усталость', 'срыв'],
+    goals: ['научить просить', 'prevent a crisis'],
+    diagnoses: ['рас / аутизм', 'задержка речи'],
+    ageMin: 2,
+    ageMax: 12,
+    priority: 7
+  },
+  {
+    id: 'sleep_and_behavior',
+    title: 'Sleep and behavior are directly connected',
+    description: 'How to build a sleep routine that works for children with autism.',
+    category: 'Sleep',
+    accent: 'purple',
+    time: '5 мин',
+    url: 'https://aba-kurs.com/blog/organizatsiya-sna-i-rezhima-dnya-dlya-rebenka-s-ras/',
+    tags: ['сон', 'режим', 'усталость', 'ночь'],
+    triggers: ['усталость'],
+    goals: ['наладить сон', 'режим дня'],
+    diagnoses: ['рас / аутизм', 'сдвг'],
+    ageMin: 2,
+    ageMax: 12,
+    priority: 7
+  },
+  {
+    id: 'sensory_diet_intro',
+    title: 'What a sensory diet is and how to ask for one',
+    description: 'A simple explanation and questions to ask at the first OT appointment.',
+    category: 'Therapy',
+    accent: 'orange',
+    time: '7 мин',
+    badge: 'New',
+    badgeClass: 'new',
+    url: 'https://autism-frc.ru/education/interventions/workingmethods/18',
+    tags: ['терапия', 'сенсорика', 'sensory diet', 'occupational therapy', 'OT', 'support', 'specialist'],
+    triggers: ['шум', 'свет', 'трудности в общественных местах', 'сенсорная перегрузка'],
+    goals: ['понять терапию', 'задать вопросы', 'понять сенсорную диету'],
+    diagnoses: ['рас / аутизм', 'сенсорные нарушения'],
+    ageMin: 2,
+    ageMax: 12,
+    priority: 10
+  }
+];
+
+const PROFILE_RULES = [
+  { bucket: 'topics', value: 'сенсорика', patterns: [/сенсор/i, /шум/i, /громк/i, /звук/i, /свет/i, /закрыва[ею]т уши/i, /перегруз/i, /сенсорн(ая|ую|ой) диет/i] },
+  { bucket: 'topics', value: 'transitions', patterns: [/transition/i, /переключ/i, /смен[аы] занятий/i, /смен[аы] обстанов/i] },
+  { bucket: 'topics', value: 'поведение', patterns: [/истерик/i, /бь[её]тся головой/i, /кричит/i, /срыв/i, /агрес/i, /самоповреж/i] },
+  { bucket: 'topics', value: 'communication', patterns: [/не говорит/i, /не просит/i, /карточк/i, /жест/i, /перерыв/i, /коммуникац/i] },
+  { bucket: 'topics', value: 'сон', patterns: [/сон/i, /не спит/i, /просыпа/i, /ноч/i, /режим/i, /устал/i] },
+  { bucket: 'triggers', value: 'шум', patterns: [/шум/i, /громк/i, /звук/i, /музык/i, /объявлен/i] },
+  { bucket: 'triggers', value: 'яркий свет', patterns: [/свет/i, /ярк/i] },
+  { bucket: 'triggers', value: 'много людей', patterns: [/люд/i, /толп/i, /магазин/i, /обществен/i] },
+  { bucket: 'triggers', value: 'смена обстановки', patterns: [/смен[аы] обстанов/i, /новое место/i] },
+  { bucket: 'triggers', value: 'transition between activities', patterns: [/transition/i, /переключ/i, /из .* в .*/i] },
+  { bucket: 'triggers', value: 'усталость', patterns: [/устал/i, /сон/i, /вечер/i, /утом/i] },
+  { bucket: 'goals', value: 'успокоить', patterns: [/что делать/i, /как помочь/i, /успоко/i, /снизить/i] },
+  { bucket: 'goals', value: 'prevent a crisis', patterns: [/предOTврат/i, /заранее/i, /до кризиса/i] },
+  { bucket: 'goals', value: 'наладить сон', patterns: [/сон/i, /режим/i, /уложить/i] },
+  { bucket: 'goals', value: 'научить просить', patterns: [/просить/i, /сказать/i, /объяснить/i, /карточк/i, /жест/i] },
+  { bucket: 'goals', value: 'понять терапию', patterns: [/что такое/i, /объясн/i, /сенсорн(ая|ую|ой) диет/i, /эргOTерап/i, /OT/i] }
+];
+
+const ARTICLE_QUERY_HINTS = {
+  sensory_diet_intro: [
+    /сенсорн(ая|ую|ой) диет/i,
+    /что такое сенсор/i,
+    /эргOTерап/i,
+    /OT/i
+  ],
+  self_harm_head_banging: [
+    /бь[её]тся головой/i,
+    /биться головой/i,
+    /самоповреж/i
+  ],
+  transitions_switching: [
+    /transition/i,
+    /переключ/i,
+    /смен[аы] занятий/i,
+    /смен[аы] обстанов/i
+  ],
+  sensory_sound_light: [
+    /перегруз/i,
+    /шум/i,
+    /свет/i,
+    /громк/i,
+    /сенсор/i
+  ],
+  communication_break_request: [
+    /перерыв/i,
+    /карточк/i,
+    /жест/i,
+    /ask for help/i
+  ],
+  sleep_and_behavior: [
+    /сон/i,
+    /режим/i,
+    /не спит/i,
+    /просыпа/i
+  ]
+};
+
+function getUsers() {
+  try {
+    return JSON.parse(localStorage.getItem(USERS_KEY) || '[]');
+  } catch (e) {
+    return [];
+  }
+}
+
+function saveUsers(users) {
+  localStorage.setItem(USERS_KEY, JSON.stringify(users));
+}
+
+function getCurrentUser() {
+  try {
+    return JSON.parse(localStorage.getItem(CURRENT_USER_KEY) || 'null');
+  } catch (e) {
+    return null;
+  }
+}
+
+function setCurrentUser(user) {
+  localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(user));
+}
+
+
+function getRecommendationStorageKey() {
+  const currentUser = getCurrentUser();
+  return currentUser ? `${RECOMMENDATION_PROFILE_KEY}_${currentUser.id}` : RECOMMENDATION_PROFILE_KEY;
+}
+
+function getRecommendationProfile() {
+  try {
+    return JSON.parse(localStorage.getItem(getRecommendationStorageKey()) || 'null');
+  } catch (e) {
+    return null;
+  }
+}
+
+function saveRecommendationProfile(profile) {
+  localStorage.setItem(getRecommendationStorageKey(), JSON.stringify(profile));
+}
+
+function resetRecommendationProfile() {
+  localStorage.removeItem(getRecommendationStorageKey());
+}
+
+function uniquePush(list, value) {
+  if (value && !list.includes(value)) list.push(value);
+}
+
+function extractRecommendationProfileFromChat() {
+  const profile = {
+    topics: [],
+    triggers: [],
+    goals: [],
+    diagnosis: [],
+    age: null,
+    updatedAt: new Date().toISOString(),
+    messageCount: chatHistory.length
+  };
+
+  const combinedText = chatHistory.map(m => m.content || '').join(' \n ').toLowerCase();
+  PROFILE_RULES.forEach(rule => {
+    if (rule.patterns.some(pattern => pattern.test(combinedText))) {
+      uniquePush(profile[rule.bucket], rule.value);
+    }
+  });
+
+  const childData = loadChildData();
+  if (childData) {
+    const parsedAge = parseInt(childData.age, 10);
+    profile.age = Number.isFinite(parsedAge) ? parsedAge : null;
+    profile.diagnosis = (childData.diagnosis || '').split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
+  }
+
+  return profile;
+}
+
+function updateRecommendationProfileFromChat() {
+  const profile = extractRecommendationProfileFromChat();
+  saveRecommendationProfile(profile);
+  renderRecommendedArticles(profile);
+  return profile;
+}
+
+function scoreArticle(article, profile) {
+  let score = article.priority || 0;
+  const profileTopics = profile?.topics || [];
+  const profileTriggers = profile?.triggers || [];
+  const profileGoals = profile?.goals || [];
+  const profileDiagnosis = profile?.diagnosis || [];
+  const profileAge = profile?.age;
+  const latestUserText = (profile?.latestUserText || '').toLowerCase();
+  const recentUserText = (profile?.recentUserText || '').toLowerCase();
+  const directArticleIds = profile?.directArticleIds || [];
+
+  if (directArticleIds.includes(article.id)) score += 20;
+
+  profileTopics.forEach(topic => {
+    if ((article.tags || []).some(tag => tag.toLowerCase().includes(topic))) score += 3;
+    if (latestUserText.includes(topic)) score += 2;
+  });
+  profileTriggers.forEach(trigger => {
+    if ((article.triggers || []).some(tag => tag.toLowerCase().includes(trigger))) score += 2;
+    if ((article.tags || []).some(tag => tag.toLowerCase().includes(trigger))) score += 1;
+    if (latestUserText.includes(trigger)) score += 2;
+  });
+  profileGoals.forEach(goal => {
+    if ((article.goals || []).some(tag => tag.toLowerCase().includes(goal))) score += 2;
+  });
+  profileDiagnosis.forEach(diag => {
+    if ((article.diagnoses || []).some(tag => tag.toLowerCase().includes(diag))) score += 2;
+  });
+
+  const searchable = [article.title, article.description]
+    .concat(article.tags || [], article.triggers || [], article.goals || [])
+    .join(' ')
+    .toLowerCase();
+
+  if (latestUserText) {
+    const tokens = latestUserText.split(/[^\p{L}\p{N}]+/u).filter(t => t.length >= 4);
+    tokens.forEach(token => {
+      if (searchable.includes(token)) score += 2;
+    });
+  }
+
+  if (recentUserText && searchable) {
+    const recentTokens = recentUserText.split(/[^\p{L}\p{N}]+/u).filter(t => t.length >= 5);
+    const overlap = recentTokens.filter(token => searchable.includes(token)).length;
+    score += Math.min(overlap, 4);
+  }
+
+  if (profileAge && article.ageMin != null && article.ageMax != null && profileAge >= article.ageMin && profileAge <= article.ageMax) {
+    score += 2;
+  }
+  if (!(profileTopics.length || profileTriggers.length || profileGoals.length || directArticleIds.length)) {
+    score += 1;
+  }
+  return score;
+}
+
+function articleCardHtml(article) {
+  return `<div class="learn-card"><div class="learn-accent ${article.accent}"></div><div class="learn-body"><div class="learn-cat ${article.accent}">${article.category}</div><div class="learn-title">${article.title}</div><div class="learn-desc">${article.description}</div><div class="learn-meta"><span class="learn-time"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>${article.time}</span>${article.badge ? `<span class="learn-badge ${article.badgeClass || 'new'}">${article.badge}</span>` : ''}</div></div><div class="learn-arrow"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></div></div>`;
+}
+
+function renderAllArticles() {
+  const holder = document.getElementById('learn-all-list');
+  if (!holder) return;
+  holder.innerHTML = ARTICLE_LIBRARY.map(articleCardHtml).join('');
+}
+
+function renderRecommendedArticles(profile = getRecommendationProfile()) {
+  const holder = document.getElementById('learn-recommended-list');
+  const note = document.getElementById('learn-recommend-note');
+  if (!holder) return;
+
+  const ranked = ARTICLE_LIBRARY
+    .map(article => ({ article, score: scoreArticle(article, profile || {}) }))
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 3)
+    .map(x => x.article);
+
+  holder.innerHTML = ranked.map(articleCardHtml).join('');
+
+  if (note) {
+    const latest = (profile?.latestUserText || '').trim();
+    if (latest) {
+      note.textContent = 'Based on your latest request';
+    } else {
+      note.textContent = 'Based on your chat';
+    }
+  }
+}
+
+function clearAuthInputs() {
+  const ids = ['login-email', 'login-password', 'register-email', 'register-password'];
+  ids.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+}
+
+function logout() {
+  localStorage.removeItem(CURRENT_USER_KEY);
+  clearAuthInputs();
+  renderRecommendedArticles(null);
+  showAuth('login');
+}
+
+/* ── Auth screens ── */
+function showAuth(which) {
+  /* which: 'login' | 'register' | null (hide both) */
+  document.getElementById('auth-login').classList.toggle('active', which === 'login');
+  document.getElementById('auth-register').classList.toggle('active', which === 'register');
+  /* Sync demo-nav highlight */
+  document.querySelectorAll('.demo-nav button').forEach(b => {
+    b.classList.toggle('on', b.getAttribute('data-screen') === 'auth-' + which);
+  });
+}
+
+function doLogin() {
+  const email = document.getElementById('login-email').value.trim().toLowerCase();
+  const password = document.getElementById('login-password').value;
+
+  if (!email || !password) {
+    alert('Enter email and password');
+    return;
+  }
+
+  const users = getUsers();
+  const user = users.find(u => u.email === email && u.password === password);
+
+  if (!user) {
+    alert('Invalid email or password');
+    return;
+  }
+
+  setCurrentUser({ id: user.id, email: user.email });
+  clearAuthInputs();
+  showAuth(null);
+
+  const childData = loadChildData();
+  goMain('home');
+  setTimeout(() => {
+    if (childData) applyChildData(childData);
+    renderRecommendedArticles(getRecommendationProfile() || extractRecommendationProfileFromChat());
+  }, 50);
+}
+
+function doRegister() {
+  const email = document.getElementById('register-email').value.trim().toLowerCase();
+  const password = document.getElementById('register-password').value;
+
+  if (!email || !password) {
+    alert('Enter email and password');
+    return;
+  }
+
+  if (password.length < 8) {
+    alert('Password must be at least 8 characters long');
+    return;
+  }
+
+  const users = getUsers();
+  const exists = users.some(u => u.email === email);
+
+  if (exists) {
+    alert('A user with this email already exists');
+    return;
+  }
+
+  const newUser = {
+    id: (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : String(Date.now()),
+    email,
+    password
+  };
+
+  users.push(newUser);
+  saveUsers(users);
+  setCurrentUser({ id: newUser.id, email: newUser.email });
+  resetRecommendationProfile();
+
+  // Keep existing prototype reset flow for fresh registration
+  chatHistory.length = 0;
+  localStorage.removeItem('qushaq_chat_history');
+  localStorage.removeItem('qushaq_chat_dom');
+  localStorage.removeItem('qushaq_child');
+  const box = document.getElementById('msgs');
+  if (box) box.innerHTML = `
+    <div class="msg-row"><div class="msg-av"><svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="8" width="18" height="11" rx="4"/><circle cx="9" cy="13.5" r="1.2" fill="white" stroke="none"/><circle cx="15" cy="13.5" r="1.2" fill="white" stroke="none"/><path d="M9 17 Q12 18.5 15 17"/><rect x="10.5" y="5" width="3" height="3.5" rx="1.2"/><circle cx="12" cy="4.2" r=".9" fill="white" stroke="none"/></svg></div><div class="bubble ai">Hi! I’ll help you understand what is happening with your child and suggest what to do right now. Describe the situation.</div></div>
+    <div class="msg-meta"><span class="msg-meta-time">${new Date().getHours()}:${String(new Date().getMinutes()).padStart(2,'0')}</span></div>`;
+
+  clearAuthInputs();
+  showAuth(null);
+  document.getElementById('ob-name').value = '';
+  document.getElementById('ob-age').value  = '';
+  setGender('boy');
+  document.querySelectorAll('.ob-diag-chip').forEach(c => c.classList.remove('on'));
+  document.getElementById('onboard').classList.add('active');
+  renderRecommendedArticles(null);
+}
+
+function goMain(name) {
+  showAuth(null);
+  go(name);
+  /* Show observation card using static baseline episodes */
+  setTimeout(() => {
+    const staticTriggers = ['Loud announcement', 'Voices and music', 'Noise and music', 'Unannounced transition'];
+    const card   = document.getElementById('home-observe-card');
+    const textEl = document.getElementById('home-observe-text');
+    const btn    = document.getElementById('home-observe-btn');
+    if (!card || !textEl || !btn) return;
+    if (episodes.length > 0) { updateObserveCard(); return; }
+    /* Use static data to pick dominant trigger */
+    const counts = {};
+    staticTriggers.forEach(t => {
+      const key = t.toLowerCase();
+      counts[key] = (counts[key] || 0) + 1;
+    });
+    const topTrigger = Object.keys(counts).reduce((a, b) => counts[a] >= counts[b] ? a : b);
+    let observation = '';
+    if (/шум|звук|громк|объявл|музык|голос|свет|яркий/.test(topTrigger)) {
+      observation = 'Observed: difficult situations happen more often in noisy places';
+    } else if (/люд|людн|толп|народ|много|обстанов/.test(topTrigger)) {
+      observation = 'Difficult situations happen more often in crowded places';
+    } else if (/transition|переключ|смена активн|между делами/.test(topTrigger)) {
+      observation = 'Difficulties come up during activity transitions';
+    } else if (/устал|сон|усталост/.test(topTrigger)) {
+      observation = 'Difficult moments are linked to fatigue';
+    } else {
+      observation = 'Observed recurring trigger: ' + topTrigger;
+    }
+    textEl.textContent = observation;
+    textEl.classList.remove('muted');
+    btn.style.display = 'block';
+    card.classList.add('visible');
+  }, 100);
+}
+
+/* ── Navigation ── */
+const SCREENS = ['home','chat','insights','work','learn','profile'];
+function go(name) {
+  SCREENS.forEach(s => {
+    const sc = document.getElementById('s-'+s);
+    if (sc) sc.classList.toggle('active', s===name);
+    const ni = document.getElementById('ni-'+s);
+    if (ni) ni.classList.toggle('on', s===name);
+  });
+  document.querySelectorAll('.demo-nav button').forEach(b => {
+    b.classList.toggle('on', b.getAttribute('data-screen')===name);
+  });
+  if (name === 'chat') setTimeout(() => {
+    const w = document.getElementById('msgs-wrap'); if (w) w.scrollTop = 99999;
+    const tl = document.getElementById('chat-time-label');
+    if (tl) { const d = new Date(); tl.textContent = 'Today · ' + d.getHours() + ':' + String(d.getMinutes()).padStart(2,'0'); }
+  }, 60);
+}
+
+function makeWorkThumb(bg, label) {
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 88 88"><rect width="88" height="88" rx="20" fill="${bg}"/><text x="44" y="50" text-anchor="middle" dominant-baseline="middle" font-family="Inter, Arial, sans-serif" font-size="24" font-weight="700" fill="#4B5563">${label}</text></svg>`;
+  return 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(svg);
+}
+
+function makeWorkAvatar(label, bg) {
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96"><circle cx="48" cy="48" r="48" fill="${bg}"/><text x="48" y="53" text-anchor="middle" dominant-baseline="middle" font-family="Inter, Arial, sans-serif" font-size="28" font-weight="700" fill="#5A535F">${label}</text></svg>`;
+  return 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(svg);
+}
+
+const workJobs = [
+  {
+    id: 'english-tutor',
+    tab: 'all',
+    section: 'Today',
+    title: 'English tutor',
+    paidOn: 'Posted: December 4, 2023',
+    price: '16000 tg',
+    action: 'details',
+    thumb: makeWorkThumb('#DCE8FF','EN'),
+    details: {
+      amount: '16,000 tenge',
+      date: 'May 30, 2023',
+      code: '5242124422',
+      description: 'English tutor needed for a 7-year-old boy, three times a week, payment after each lesson, Pre-Intermediate level, preferred time: 10:00.',
+      customer: 'Sasha Trusova',
+      phone: '+7 7757264894',
+      city: 'Aktobe',
+      since: 'May 30, 2021',
+      avatar: makeWorkAvatar('ST','#EAD9C9')
+    }
+  },
+  {
+    id: 'dress-order',
+    tab: 'all',
+    section: 'Today',
+    title: 'Custom dress sewing',
+    paidOn: 'Posted: May 22, 2023',
+    price: '20000 tg',
+    action: 'disabled',
+    thumb: makeWorkThumb('#FFE6E1','✂️')
+  },
+  {
+    id: 'translator',
+    tab: 'all',
+    section: 'Yesterday',
+    title: 'Translator needed for 2 hours',
+    paidOn: 'Posted: May 2, 2025',
+    price: '15000 tg',
+    action: 'details',
+    thumb: makeWorkThumb('#DCE8FF','EN'),
+    details: {
+      amount: '15000 tenge',
+      date: 'May 2th, 2025',
+      code: '6615182480',
+      description: 'Translator needed for a 2-hour meeting. English and Russian required, office in the city center, payment immediately after completion.',
+      customer: 'Aigerim N.',
+      phone: '+7 7025550142',
+      city: 'Almaty',
+      since: 'January 11th, 2022',
+      avatar: makeWorkAvatar('AN','#E4D8D2')
+    }
+  },
+  {
+    id: 'cookies',
+    tab: 'all',
+    section: 'Yesterday',
+    title: 'Homemade cookies',
+    paidOn: 'Posted: January 12, 2023',
+    price: '5000 tg',
+    action: 'details',
+    thumb: makeWorkThumb('#F7E7E7','🍪'),
+    details: {
+      amount: '5000 tenge',
+      date: 'January 12th, 2023',
+      code: '3002181182',
+      description: 'Need homemade cookies for a small family event. Delivery by evening, classic flavors only.',
+      customer: 'Madina K.',
+      phone: '+7 7073101254',
+      city: 'Astana',
+      since: 'October 5th, 2020',
+      avatar: makeWorkAvatar('MK','#E9DCCF')
+    }
+  },
+  {
+    id: 'time-planner',
+    tab: 'all',
+    section: 'Yesterday',
+    title: 'Time planner',
+    paidOn: 'Posted: May 11, 2023',
+    price: '7800 tg',
+    action: 'disabled',
+    thumb: makeWorkThumb('#E7F7F5','⏰')
+  },
+  {
+    id: 'cupcakes',
+    tab: 'others',
+    section: 'Today',
+    title: 'Cupcakes needed',
+    paidOn: 'Posted: May 4, 2023',
+    price: '13000 tg',
+    action: 'details',
+    thumb: makeWorkThumb('#FFF0DE','🧁'),
+    details: {
+      amount: '13000 tenge',
+      date: 'May 4th, 2023',
+      code: '8124401174',
+      description: 'Need cupcakes for a birthday. Twelve pieces, pastel decoration, pickup in the evening.',
+      customer: 'Dana S.',
+      phone: '+7 7472801941',
+      city: 'Karaganda',
+      since: 'March 18th, 2021',
+      avatar: makeWorkAvatar('DS','#E7D9D3')
+    }
+  },
+  {
+    id: 'smm-manager',
+    tab: 'others',
+    section: 'Today',
+    title: 'Online SMM manager',
+    paidOn: 'Posted: May 4, 2023',
+    price: '20000 tg',
+    action: 'details',
+    thumb: makeWorkThumb('#E5F4FF','SMM'),
+    details: {
+      amount: '20000 tenge',
+      date: 'May 4th, 2023',
+      code: '9027711118',
+      description: 'Need online SMM manager for a small shop. Posting stories, simple design, answering messages during weekdays.',
+      customer: 'Saltanat B.',
+      phone: '+7 7011264188',
+      city: 'Shymkent',
+      since: 'June 2th, 2022',
+      avatar: makeWorkAvatar('SB','#D7E2DD')
+    }
+  },
+  {
+    id: 'gloves',
+    tab: 'others',
+    section: 'Early applications',
+    title: 'Glove sewing',
+    paidOn: 'Posted: May 3, 2023',
+    price: '5000 tg',
+    action: 'details',
+    thumb: makeWorkThumb('#F2ECE4','🧤'),
+    details: {
+      amount: '5000 tenge',
+      date: 'May 3th, 2023',
+      code: '4721184410',
+      description: 'Need a warm pair of gloves sewn from soft fabric. Simple design, no decorations.',
+      customer: 'Aruzhan T.',
+      phone: '+7 7086334411',
+      city: 'Kostanay',
+      since: 'February 8th, 2021',
+      avatar: makeWorkAvatar('AT','#DDD8CC')
+    }
+  },
+  {
+    id: 'canva',
+    tab: 'others',
+    section: 'Early applications',
+    title: 'Graphic design in Canva',
+    paidOn: 'Posted: May 3, 2023',
+    price: '9000 tg',
+    action: 'disabled',
+    thumb: makeWorkThumb('#EAF7F0','CV')
+  },
+  {
+    id: 'my-english',
+    tab: 'my',
+    section: 'Early applications',
+    title: 'English tutor',
+    paidOn: 'Posted: April 4, 2023',
+    price: '25000 tg',
+    action: 'paid',
+    thumb: makeWorkThumb('#DCE8FF','EN')
+  },
+  {
+    id: 'my-cupcakes',
+    tab: 'my',
+    section: 'Early applications',
+    title: 'Cupcakes',
+    paidOn: 'Posted: May 6, 2023',
+    price: '7500 tg',
+    action: 'paid',
+    thumb: makeWorkThumb('#FFF0DE','🧁')
+  }
+];
+
+let currentWorkTab = 'all';
+
+function renderWorkScreen(tab = currentWorkTab) {
+  currentWorkTab = tab;
+  const list = document.getElementById('work-list');
+  const empty = document.getElementById('work-empty');
+  const tabs = document.querySelectorAll('.work-tab');
+  if (!list || !empty || !tabs.length) return;
+
+  tabs.forEach(btn => btn.classList.toggle('active', btn.dataset.tab === tab));
+  const jobs = workJobs.filter(job => job.tab === tab);
+  const sections = [];
+  jobs.forEach(job => { if (!sections.includes(job.section)) sections.push(job.section); });
+
+  list.innerHTML = sections.map(section => {
+    const items = jobs.filter(job => job.section === section).map(job => `
+      <div class="work-card">
+        <div class="work-card-thumb"><img src="${job.thumb}" alt="${job.title}"></div>
+        <div class="work-card-body">
+          <div class="work-card-title">${job.title}</div>
+          <div class="work-card-date">${job.paidOn}</div>
+        </div>
+        <div class="work-card-side">
+          <div class="work-card-price">${job.price}</div>
+          ${job.action === 'details'
+            ? `<button class="work-btn details" type="button" onclick="openWorkDetails('${job.id}')">Details</button>`
+            : job.action === 'paid'
+              ? `<button class="work-btn paid" type="button" disabled>Paid</button>`
+              : `<button class="work-btn disabled" type="button" disabled>Unavailable</button>`}
+        </div>
+      </div>`).join('');
+    return `<div class="work-section"><div class="work-section-title">${section}</div>${items}</div>`;
+  }).join('');
+
+  empty.classList.toggle('show', jobs.length === 0);
+}
+
+function openWorkDetails(jobId) {
+  const job = workJobs.find(item => item.id === jobId && item.details);
+  if (!job) return;
+  const d = job.details;
+  document.getElementById('work-detail-amount').textContent = d.amount;
+  document.getElementById('work-detail-date').textContent = d.date;
+  document.getElementById('work-detail-code').textContent = d.code;
+  document.getElementById('work-detail-description').textContent = d.description;
+  document.getElementById('work-detail-customer').textContent = d.customer;
+  document.getElementById('work-detail-phone').textContent = d.phone;
+  document.getElementById('work-detail-city').textContent = d.city;
+  document.getElementById('work-detail-since').textContent = d.since;
+  document.getElementById('work-detail-avatar').src = d.avatar;
+  document.getElementById('work-detail-avatar').alt = d.customer;
+  document.getElementById('work-detail-overlay').classList.add('open');
+}
+
+function closeWorkDetails() {
+  const overlay = document.getElementById('work-detail-overlay');
+  if (overlay) overlay.classList.remove('open');
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  document.querySelectorAll('.work-tab').forEach(btn => {
+    btn.addEventListener('click', () => renderWorkScreen(btn.dataset.tab));
+  });
+  renderWorkScreen('all');
+});
+
+function openCrisis()  { document.getElementById('crisis-overlay').classList.add('open'); }
+function closeCrisis() { document.getElementById('crisis-overlay').classList.remove('open'); }
+
+/* ── Log Episode overlay ── */
+function openLogEpisode() {
+  closeCrisis();
+  // Date field starts empty — user must choose manually
+  document.getElementById('log-date').value = '';
+  // Clear previous values
+  document.getElementById('log-place').value = '';
+  document.getElementById('log-what').value = '';
+  document.getElementById('log-trigger').value = '';
+  document.querySelectorAll('#log-tags .log-tag').forEach(t => t.classList.remove('active'));
+  // Open overlay
+  document.getElementById('log-overlay').classList.add('open');
+}
+
+function closeLogEpisode() {
+  document.getElementById('log-overlay').classList.remove('open');
+}
+
+function selectTag(el, value) {
+  // Toggle tag selection
+  document.querySelectorAll('#log-tags .log-tag').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('log-trigger').value = value;
+}
+
+/* ── Episode store (in-memory array) ── */
+let episodes = [];
+
+/* Short Russian month names for display */
+const MONTHS_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+/* Parse a YYYY-MM-DD date string into {day, monthIdx} for display */
+function parseDateInput(val) {
+  if (!val) { const n = new Date(); return {day: n.getDate(), monthIdx: n.getMonth(), iso: toIso(n)}; }
+  const parts = val.split('-');
+  if (parts.length === 3) return {day: parseInt(parts[2],10), monthIdx: parseInt(parts[1],10)-1, iso: val};
+  const n = new Date(); return {day: n.getDate(), monthIdx: n.getMonth(), iso: toIso(n)};
+}
+
+function toIso(d) {
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+
+function saveEpisode() {
+  const dateVal  = document.getElementById('log-date').value || toIso(new Date());
+  const place    = document.getElementById('log-place').value.trim()   || 'Not specified';
+  const what     = document.getElementById('log-what').value.trim()    || 'Not described';
+  const trigger  = document.getElementById('log-trigger').value.trim() || null;
+
+  const parsed = parseDateInput(dateVal);
+
+  /* Push new episode into the shared array */
+  /* Store episode with canonical field names matching renderAnalytics */
+  episodes.push({ iso: parsed.iso, day: parsed.day, monthIdx: parsed.monthIdx, place, description: what, trigger });
+  updateLastEpisodeBlock();
+  updateObserveCard();
+
+  /* Close form */
+  closeLogEpisode();
+
+  /* Show confirmation toast */
+  const toast = document.getElementById('save-toast');
+  toast.classList.add('show');
+  setTimeout(() => toast.classList.remove('show'), 3200);
+
+  /* Navigate to analytics after brief delay and re-render */
+  setTimeout(() => {
+    go('insights');
+    renderAnalytics();
+  }, 600);
+}
+
+/* ══════════════════════════════════════════════════════════
+   CATEGORY SYSTEM
+   5 categories, each maps to a CSS class, color, label, and recommendation
+   ════════════════════════════════════════════════════════ */
+
+/* PREDEFINED TRIGGER → CATEGORY mapping (from log form chips) */
+const TAG_CATEGORY = {
+  'Loud noise':          'SENSORY',
+  'Яркий свет':            'SENSORY',
+  'Много людей':           'ENVIRONMENT',
+  'Смена обстановки':      'ENVIRONMENT',
+  'Переход между делами':  'TRANSITION',
+  'Усталость':             'STATE',
+};
+
+/* KEYWORD → CATEGORY for free-text input */
+function classifyFreeText(text) {
+  if (!text) return 'UNSPECIFIED';
+  const t = text.toLowerCase();
+  if (/шум|звук|громк|объявл|музык|голос|свет|яркий/.test(t)) return 'SENSORY';
+  if (/люд|людн|толп|народ|много|обстанов/.test(t))            return 'ENVIRONMENT';
+  if (/transition|переключ|смена активн/.test(t))                  return 'TRANSITION';
+  if (/устал|сон|усталост/.test(t))                            return 'STATE';
+  return 'UNSPECIFIED';
+}
+
+/* Resolve episode trigger to a category — handles null, predefined tags, and free text */
+function resolveCategory(trigger) {
+  if (!trigger || trigger.trim() === '') return 'UNSPECIFIED';
+  if (TAG_CATEGORY[trigger]) return TAG_CATEGORY[trigger];
+  return classifyFreeText(trigger);
+}
+
+/* Category → CSS class for dots, bars, tags */
+function catClass(cat) {
+  const MAP = {
+    'SENSORY':    'cat-сенс',
+    'ENVIRONMENT':        'cat-environment',
+    'TRANSITION':      'cat-transition',
+    'STATE':    'cat-сост',
+    'UNSPECIFIED':'cat-none',
+  };
+  return MAP[cat] || 'cat-none';
+}
+
+/* Category → human-readable Russian label (short) */
+function catLabel(cat) {
+  const LABELS = {
+    'SENSORY':    'Sensory',
+    'ENVIRONMENT':        'Environment',
+    'TRANSITION':      'Transition',
+    'STATE':    'State',
+    'UNSPECIFIED':'Unspecified',
+  };
+  return LABELS[cat] || 'Unspecified';
+}
+
+/* Find the most frequent category across all episodes (including НЕ ОПРЕДЕЛЕНО) */
+function getDominantCategory() {
+  const counts = {};
+  episodes.forEach(ep => {
+    const cat = resolveCategory(ep.trigger);
+    counts[cat] = (counts[cat] || 0) + 1;
+  });
+  let best = 'UNSPECIFIED', bestN = 0;
+  Object.entries(counts).forEach(([cat, n]) => { if (n > bestN) { best = cat; bestN = n; } });
+  return best;
+}
+
+function updateLastEpisodeBlock() {
+  const block = document.getElementById('home-last-ep');
+  const textEl = document.getElementById('home-last-ep-text');
+  const btn = document.getElementById('home-last-ep-btn');
+  if (!block || !textEl) return;
+
+  if (!episodes.length) {
+    block.style.display = 'none';
+    return;
+  }
+
+  const last = episodes[episodes.length - 1];
+  const place = last.place || 'Неизвестно';
+  const trigger = last.trigger || last.description || 'Не указан';
+  textEl.textContent = place + ' — ' + trigger;
+  block.style.display = 'block';
+  if (btn) btn.style.display = 'block';
+}
+
+/* ── AI Observation card ── */
+function updateObserveCard() {
+  const card    = document.getElementById('home-observe-card');
+  const textEl  = document.getElementById('home-observe-text');
+  const btn     = document.getElementById('home-observe-btn');
+  if (!card || !textEl || !btn) return;
+
+  /* Count triggers from dynamic episodes only */
+  const counts = {};
+  episodes.forEach(ep => {
+    const t = (ep.trigger || '').toLowerCase();
+    if (!t) return;
+    counts[t] = (counts[t] || 0) + 1;
+  });
+
+  const keys = Object.keys(counts);
+  if (!keys.length) {
+    /* No data yet — show placeholder, hide button */
+    textEl.textContent = 'Not enough data for observations yet';
+    textEl.classList.add('muted');
+    btn.style.display = 'none';
+    card.classList.add('visible');
+    return;
+  }
+
+  /* Find most frequent trigger */
+  const topTrigger = keys.reduce((a, b) => counts[a] >= counts[b] ? a : b);
+
+  /* Map trigger to observation text */
+  let observation = '';
+  if (/шум|звук|громк|объявл|музык|голос|свет|яркий/.test(topTrigger)) {
+    observation = 'Observed: difficult situations happen more often in noisy places';
+  } else if (/люд|людн|толп|народ|много|обстанов/.test(topTrigger)) {
+    observation = 'Difficult situations happen more often in crowded places';
+  } else if (/transition|переключ|смена активн|между делами/.test(topTrigger)) {
+    observation = 'Difficulties come up during activity transitions';
+  } else if (/устал|сон|усталост/.test(topTrigger)) {
+    observation = 'Difficult moments are linked to fatigue';
+  } else {
+    observation = 'Observed recurring trigger: ' + topTrigger;
+  }
+
+  textEl.textContent = observation;
+  textEl.classList.remove('muted');
+  btn.style.display = 'block';
+  card.classList.add('visible');
+}
+
+function repeatLastEpisode() {
+  if (!episodes.length) return;
+  const last = episodes[episodes.length - 1];
+  const place = last.place || 'Неизвестно';
+  const trigger = last.trigger || last.description || 'Не указан';
+  const msg = `Повтори рекомендации для ситуации: ${place}, ${trigger}`;
+
+  go('chat');
+  setTimeout(() => {
+    const inp = document.getElementById('ci');
+    if (inp) {
+      inp.value = msg;
+      send();
+    }
+  }, 150);
+}
+
+function renderAnalytics() {
+  /* ── 1. Show AI-updated banner ── */
+  const banner = document.getElementById('ai-updated-banner');
+  if (banner) banner.classList.add('show');
+
+  const total = episodes.length;
+
+  /* ── 2. Count per category across ALL episodes ── */
+  const counts = { 'SENSORY': 0, 'ENVIRONMENT': 0, 'TRANSITION': 0, 'STATE': 0, 'UNSPECIFIED': 0 };
+  episodes.forEach(ep => { counts[resolveCategory(ep.trigger)]++; });
+
+  /* Static baseline episodes (pre-loaded in HTML):
+     Mar 9  → СЕНСОРНОЕ, Mar 12 → СРЕДА, Mar 9 (ТРЦ) → СЕНСОРНОЕ, 5 Mar → ПЕРЕХОД */
+  const BASE = { 'SENSORY': 2, 'ENVIRONMENT': 1, 'TRANSITION': 1, 'STATE': 0, 'UNSPECIFIED': 0 };
+  const totalAll = total + 4; /* 4 static episodes */
+  Object.keys(BASE).forEach(k => counts[k] += BASE[k]);
+
+  /* ── 3. Dominant category ── */
+  const dominant = getDominantCategory();
+
+  /* ── 4. Update pattern card title ── */
+  const titleEl = document.getElementById('pattern-card-title');
+  if (titleEl) {
+    const TITLES = {
+      'SENSORY':    'Difficult moments are more often linked to noise',
+      'ENVIRONMENT':        'Сложные моменты чаще происходят в людных местах',
+      'TRANSITION':      'Сложные моменты связаны с transitionами между делами',
+      'STATE':    'Сложные моменты чаще связаны с усталостью',
+      'UNSPECIFIED':'Qushaq is still tracking patterns',
+    };
+    titleEl.textContent = TITLES[total === 0 ? 'SENSORY' : dominant];
+  }
+
+  /* ── 5. Update pattern body text ── */
+  const pcb = document.getElementById('pattern-card-body');
+  if (pcb) {
+    if (total === 0) {
+      pcb.innerHTML =
+        '<strong style="color:var(--ink)">2 из 4 эпизодов</strong>' +
+        ' happened in noisy places. A frequent trigger is ' +
+        '<strong style="color:var(--ink)">sudden noise</strong>.';
+    } else {
+      const domCount = counts[dominant];
+      const label    = catLabel(dominant).toLowerCase();
+      pcb.innerHTML =
+        '<strong style="color:var(--ink)">' + domCount + ' из ' + totalAll + ' эпизодов</strong>' +
+        ' чаще связаны с категорией «' + label + '». Это повторяется' +
+        ' <strong style="color:var(--ink)">регулярно</strong>.';
+    }
+  }
+
+  /* ── 6. Update recommendation based on dominant category ── */
+  const recEl = document.getElementById('pattern-rec-body');
+  if (recEl) {
+    const RECS = {
+      'SENSORY':    'Discuss noise sensitivity with an OT specialist. A personalized plan is usually more helpful than general advice.',
+      'ENVIRONMENT':        'Try spending less time in crowded places and plan short breaks in advance.',
+      'TRANSITION':      'Give advance notice before switching activities and use short visual cues.',
+      'STATE':    'Watch for fatigue and add breaks before tension builds up.',
+      'UNSPECIFIED':'Try tracking when this happens to identify the pattern.',
+    };
+    recEl.textContent = RECS[total === 0 ? 'SENSORY' : dominant];
+  }
+
+  /* ── 7. Add/update today’s chart bar — height = episode count today (equal, honest) ── */
+  const chart = document.getElementById('ep-chart');
+  if (chart) {
+    let todayBar = document.getElementById('ep-bar-today');
+    const todayCls = 'ep-bar-fill ' + catClass(dominant);
+    /* Each episode today adds 20% height, min 20%, max 100% */
+    const barH = Math.min(20 + total * 20, 100) + '%';
+    if (!todayBar) {
+      todayBar = document.createElement('div');
+      todayBar.className = 'ep-bar-wrap';
+      todayBar.id = 'ep-bar-today';
+      todayBar.innerHTML =
+        '<div class="ep-bar-outer"><div class="' + todayCls + '" id="ep-bar-today-fill" style="height:0%;transition:height .6s ease"></div></div>' +
+        '<div class="ep-bar-date">today</div>';
+      chart.appendChild(todayBar);
+      setTimeout(() => {
+        const fill = document.getElementById('ep-bar-today-fill');
+        if (fill) fill.style.height = barH;
+      }, 80);
+    } else {
+      /* Update class (dominant may have changed) and height */
+      const fill = document.getElementById('ep-bar-today-fill');
+      if (fill) {
+        fill.className = todayCls;
+        fill.style.height = barH;
+      }
+    }
+  }
+
+  /* ── 8. Re-render the full user-added episode list (newest first) ── */
+  const epCard = document.getElementById('episode-card');
+  if (epCard) {
+    epCard.querySelectorAll('.ep-item.ep-new').forEach(el => el.remove());
+    [...episodes].reverse().forEach(ep => {
+      const cat    = resolveCategory(ep.trigger);
+      const cls    = catClass(cat);
+      /* Show trigger label: use custom text if entered, else show category label */
+      const trigLabel = ep.trigger ? ep.trigger : 'Unspecified';
+      const triggerHtml =
+        '<div class="ep-trigger ' + cls + '">' +
+        '<svg viewBox="0 0 24 24" fill="none" stroke-width="2.5" stroke-linecap="round">' +
+        '<path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>' +
+        trigLabel + '</div>';
+      const newEp = document.createElement('div');
+      newEp.className = 'ep-item ep-new';
+      newEp.innerHTML =
+        '<div class="ep-date"><div class="ep-date-day">' + ep.day + '</div>' +
+        '<div class="ep-date-month">' + MONTHS_SHORT[ep.monthIdx] + '</div></div>' +
+        '<div class="ep-dot-line"><div class="ep-dot ' + cls + '"></div><div class="ep-line"></div></div>' +
+        '<div><div class="ep-place">' + ep.place + '</div>' +
+        '<div class="ep-behavior">' + ep.description + '</div>' + triggerHtml + '</div>';
+      epCard.insertBefore(newEp, epCard.firstChild);
+    });
+  }
+
+  /* ── 9. Scroll insights to top ── */
+  const insightsScroll = document.querySelector('#s-insights .scroll-y');
+  if (insightsScroll) insightsScroll.scrollTop = 0;
+}
+
+function clearChat() {
+  if (!confirm('Clear chat history?')) return;
+  chatHistory.length = 0;
+  localStorage.removeItem('qushaq_chat_history');
+  localStorage.removeItem('qushaq_chat_dom');
+  const box = document.getElementById('msgs');
+  const t = time();
+  box.innerHTML = `
+    <div class="msg-row"><div class="msg-av"><svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="8" width="18" height="11" rx="4"/><circle cx="9" cy="13.5" r="1.2" fill="white" stroke="none"/><circle cx="15" cy="13.5" r="1.2" fill="white" stroke="none"/><path d="M9 17 Q12 18.5 15 17"/><rect x="10.5" y="5" width="3" height="3.5" rx="1.2"/><circle cx="12" cy="4.2" r=".9" fill="white" stroke="none"/></svg></div><div class="bubble ai">Hi! I’ll help you understand what is happening with your child and suggest what to do right now. Describe the situation.</div></div>
+    <div class="msg-meta"><span class="msg-meta-time">${t}</span></div>`;
+}
+
+function copyCard(btn) {
+  const ar = btn.closest('.action-row');
+  let el = ar.previousElementSibling;
+  let cardText = '';
+  let introText = '';
+
+  // Walk backwards through all siblings to find card and intro
+  while (el) {
+    if (el.classList.contains('response-card') && !cardText) {
+      el.querySelectorAll('.rc-section').forEach(sec => {
+        const title = sec.querySelector('.rc-section-title')?.textContent?.trim() || '';
+        cardText += title + '\n';
+        sec.querySelectorAll('.rc-bullet, .rc-step-text').forEach(item => {
+          cardText += item.textContent.trim() + '\n';
+        });
+        cardText += '\n';
+      });
+    }
+    if (el.classList.contains('msg-row') && !introText) {
+      const bubble = el.querySelector('.bubble.ai');
+      if (bubble) introText = bubble.textContent.trim();
+    }
+    el = el.previousElementSibling;
+  }
+
+  const text = [introText, cardText].filter(Boolean).join('\n\n').trim() || 'No text to copy';
+
+  navigator.clipboard.writeText(text).then(() => {
+    btn.classList.add('copied');
+    btn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Copied ✓`;
+    setTimeout(() => {
+      btn.classList.remove('copied');
+      btn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>Copy`;
+    }, 2000);
+  }).catch(() => {
+    // Fallback for browsers that block clipboard
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    btn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Copied ✓`;
+    setTimeout(() => {
+      btn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>Copy`;
+    }, 2000);
+  });
+}
+
+function addChip(btn) { const ci = document.getElementById('ci'); ci.value = btn.textContent.trim(); ci.focus(); }
+
+function toggleSave(btn) {
+  btn.classList.toggle('saved');
+  const sv = btn.classList.contains('saved');
+  btn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2z"/></svg>${sv ? 'Saved ✓' : 'Save'}`;
+}
+
+function feedbackClick(btn, type) {
+  const row = btn.closest('.action-row');
+  row.querySelectorAll('.feedback-btn').forEach(b => b.classList.remove('active-helped','active-nope'));
+  btn.classList.add(type === 'helped' ? 'active-helped' : 'active-nope');
+}
+
+function avHtml() {
+  return `<div class="msg-av"><svg viewBox="0 0 20 20" fill="none"><circle cx="7.5" cy="10.5" r="1.2" fill="white"/><circle cx="12.5" cy="10.5" r="1.2" fill="white"/><path d="M8 14 Q10 15.2 12 14" stroke="white" stroke-width="1.1" stroke-linecap="round"/></svg></div>`;
+}
+function time() { const d = new Date(); return d.getHours() + ':' + String(d.getMinutes()).padStart(2,'0'); }
+function esc(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+/* ── Chat history for context ── */
+const CHAT_CACHE_VERSION = 'en_v2';
+if (localStorage.getItem('qushaq_chat_cache_version') !== CHAT_CACHE_VERSION) {
+  localStorage.removeItem('qushaq_chat_history');
+  localStorage.removeItem('qushaq_chat_dom');
+  localStorage.setItem('qushaq_chat_cache_version', CHAT_CACHE_VERSION);
+}
+
+const chatHistory = JSON.parse(localStorage.getItem('qushaq_chat_history') || '[]');
+
+function saveChatHistory() {
+  localStorage.setItem('qushaq_chat_history', JSON.stringify(chatHistory));
+}
+
+function saveMsgsDom() {
+  const box = document.getElementById('msgs');
+  if (box) localStorage.setItem('qushaq_chat_dom', box.innerHTML);
+}
+
+function restoreMsgsDom() {
+  const saved = localStorage.getItem('qushaq_chat_dom');
+  const box = document.getElementById('msgs');
+  if (saved && box) {
+    if (/[А-Яа-яЁё]/.test(saved)) {
+      localStorage.removeItem('qushaq_chat_dom');
+      return;
+    }
+    box.innerHTML = saved;
+    setTimeout(() => { const w = document.getElementById('msgs-wrap'); if (w) w.scrollTop = 99999; }, 60);
+  }
+}
+
+// Restore on load
+window.addEventListener('DOMContentLoaded', () => { restoreMsgsDom(); renderRecommendedArticles(getRecommendationProfile() || extractRecommendationProfileFromChat()); });
+let CHILD_CONTEXT = '';
+
+const SYSTEM_PROMPT_BASE = `You are Qushaq AI, an assistant for parents of neurodivergent children. Respond like an experienced, calm specialist who speaks simply and clearly. No fluff and no poetic language.
+
+IMPORTANT: You must reply ONLY with a valid JSON object. No text before or after JSON. No markdown. JSON only.
+
+Response structure:
+{
+  "detect": "Short phrase describing what is happening (2 to 5 words)",
+  "intro": "1 to 2 sentences with the core idea in simple language",
+  "sections": [
+    {
+      "color": "purple",
+      "title": "Why this happens",
+      "type": "bullets",
+      "items": ["• item 1", "• item 2", "• item 3"]
+    },
+    {
+      "color": "teal",
+      "title": "What to do right now",
+      "type": "steps",
+      "items": ["step 1", "step 2", "step 3"]
+    },
+    {
+      "color": "blue",
+      "title": "For the future",
+      "type": "bullets",
+      "items": ["• tip 1", "• tip 2"]
+    }
+  ],
+  "followup": "One specific follow-up question"
+}
+
+STYLE REQUIREMENTS:
+- Always use respectful second-person language
+- Keep the whole reply in English only
+- Points must be specific, meaningful, and 6 to 12 words long. Do not leave thoughts unfinished.
+- Bad: “Watch your child’s reaction”, “Trust your intuition”, “Find someone open to learning”. These are vague and unhelpful.
+- Good: “If the child became more anxious after the session, that matters”, “A good specialist explains what they are doing and why”, “Ask the doctor what results to expect in 2 to 3 months”
+- No dramatic language. Avoid phrases like “their world is full of impressions”. Use plain wording like “Children with autism may struggle to calm down after a busy day”.
+- Advice must be actionable right now, not abstract
+- Do not start intro with “I understand”, “This is hard”, or “Of course”
+
+FORBIDDEN WORDS AND PHRASES: sensory diet, patterns, stimuli, sensory overload, sensory integration, motor, cognitive, dysfunction, implement, visual schedule, OT specialist, neuropsychologist, sleep specialist, trust your intuition, watch your child’s reaction.
+
+Structure rules:
+- sections: exactly 3 sections with the same titles
+- "Why this happens" — bullets, exactly 3 bullet points
+- "What to do right now" — steps, exactly 3 steps
+- "For the future" — bullets, exactly 2 bullet points
+- detect — 2 to 4 words, without the child’s name
+- intro — 1 to 2 sentences, maximum 25 words
+- followup — one specific question
+- Take the full conversation history into account
+- JSON only, nothing but JSON`;
+
+function getSystemPrompt() {
+  return CHILD_CONTEXT ? SYSTEM_PROMPT_BASE + '\n\n' + CHILD_CONTEXT : SYSTEM_PROMPT_BASE;
+}
+
+/* ── Legacy RESP (fallback) ── */
+const RESP = {
+  default: {
+    detect: 'Analyzing the situation',
+    intro: 'I hear you. Let’s look at this together to find the most accurate answer.',
+    card: {
+      sections: [
+        { color:'purple', icon:'<circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>', title:'What to pay attention to',
+          bullets:['• When exactly it happens: time of day, place, situation', '• What happened before: fatigue, change of environment, food', '• How long it lasts and how often it repeats']},
+        { color:'teal', icon:'<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>', title:'What to do right now',
+          steps:['Stay calm. Your child can feel your state.', 'Do not explain or persuade during the meltdown', 'Describe it in more detail and I will give more precise guidance']},
+        { color:'blue', icon:'<path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/>', title:'Helpful to know',
+          bullets:['• Most difficult situations have a specific cause', '• The more details you share, the more precisely I can help']}
+      ]
+    },
+    followup: 'Tell me more: what exactly is happening, and at what moment?'
+  },
+  food: {
+    detect: 'Feeding difficulties are common with sensory differences',
+    intro: 'Food refusal in children with sensory differences is not being picky. Taste, smell, and texture can feel physically overwhelming.',
+    card: {
+      sections: [
+        { color:'purple', icon:'<circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>', title:'Why this happens',
+          bullets:['• Sensory sensitivity to food texture, smell, or appearance', '• Anxiety and stress can suppress appetite', '• Rigid eating patterns mean the child may only eat “safe” foods']},
+        { color:'teal', icon:'<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>', title:'What helps right now',
+          steps:['Do not force or persuade. That increases aversion.', 'Offer familiar “safe” foods without pressure', 'Let the child simply sit at the table without expecting them to eat']},
+        { color:'blue', icon:'<path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/>', title:'For the future',
+          bullets:['• Introduce new foods slowly alongside preferred foods, without pressure', '• An occupational therapist can help broaden the food repertoire']}
+      ]
+    },
+    followup: 'Does Alan refuse all new foods, or are there specific foods he still eats?'
+  },
+  school: {
+    detect: 'Difficulties at daycare or school',
+    intro: 'Challenging behavior at daycare or school is often linked to overload: too many people, sounds, and demands at once.',
+    card: {
+      sections: [
+        { color:'purple', icon:'<circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>', title:'Why this happens',
+          bullets:['• Noise, bright light, and crowded spaces build up over the day', '• Switching activities without warning can trigger anxiety', '• Social demands can drain energy faster than it seems']},
+        { color:'teal', icon:'<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>', title:'What to do right now',
+          steps:['After daycare, give 30 to 40 minutes of decompression time. Quiet and no questions.', 'Do not ask “how was your day?” right away', 'Talk to the teacher or caregiver about sensory triggers']},
+        { color:'blue', icon:'<path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/>', title:'For the future',
+          bullets:['• Ask for a “quiet spot” the child can go to', '• A visual daily schedule reduces anxiety about surprises']}
+      ]
+    },
+    followup: 'Does this happen every day, or only on certain days or in certain situations at daycare?'
+  },
+  sensory: {
+    detect: 'A sudden loud sound can trigger sensory overload',
+    intro: 'This looks like sensory overload caused by a sudden loud sound. For Alan, this is not a tantrum. His nervous system reacts more intensely than most children’s.',
+    card: {
+      sections: [
+        { color:'purple', icon:'<circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>', title:'Why this happens',
+          bullets:['• Head hitting can be a way to cope with overload, not aggression', '• Regular headphones reduce background noise but do not block sudden sharp sounds']},
+        { color:'teal', icon:'<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>', title:'What helps right now',
+          steps:['Calmly move to a quiet place. Do not rush.', 'Stay quietly nearby. Do not explain or persuade.', 'If head hitting starts, quietly say <strong>“hands rest”</strong> once']},
+        { color:'blue', icon:'<path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/>', title:'For the future',
+          bullets:['• <strong>Noise-cancelling headphones</strong> are better for sudden sounds', '• Put them on <strong>before entering</strong> a noisy place, not after']}
+      ]
+    },
+    followup: 'Did this happen right after the announcement, or had the tension been building before that?'
+  },
+  sleep: {
+    detect: 'It may be related to sleep quality',
+    intro: 'Poor sleep strongly affects how Alan handles difficult situations during the day.',
+    card: {
+      sections: [
+        { color:'purple', icon:'<circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>', title:'Why this happens',
+          bullets:['• Even one restless night can increase sensitivity to stress', '• Light or noise at night can interfere with deep sleep']},
+        { color:'teal', icon:'<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>', title:'What helps right now',
+          steps:['Keep the same wake-up time, even after a difficult night', 'Tonight: darken the room and turn on white noise', 'Remove screens 30 minutes before bedtime']},
+        { color:'blue', icon:'<path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/>', title:'For the future',
+          bullets:['• Keep the same wake-up time every day, including weekends', '• Try a simple picture-based bedtime routine with 3 to 4 steps']}
+      ]
+    },
+    followup: 'Does Alan have trouble falling asleep, or does he wake up during the night?'
+  },
+  aba: {
+    detect: 'There may be no easy way to ask for a break',
+    intro: 'Alan may not yet have a simple way to say “I need to stop.” Challenging behavior becomes his language.',
+    card: {
+      sections: [
+        { color:'purple', icon:'<circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>', title:'Why this happens',
+          bullets:['• There is no simple way to say “I need a break”', '• Challenging behavior may be the only signal available to him']},
+        { color:'teal', icon:'<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>', title:'What helps right now',
+          steps:['Introduce a simple “I need a break” signal, like a card or gesture', 'Respond right away every time he uses it', 'Praise specifically: <strong>“Great job showing the card”</strong>']},
+        { color:'blue', icon:'<path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/>', title:'For the future',
+          bullets:['• Practice the signal during calm moments, not during a meltdown', '• It is worth finding a specialist experienced with sensory differences']}
+      ]
+    },
+    followup: 'Has Alan ever shown in his own way that he needs a pause?'
+  },
+  ot: {
+    detect: 'A sensory specialist may help',
+    intro: 'An occupational therapist can create a personalized plan specifically for Alan. That is much more effective than general advice.',
+    card: {
+      sections: [
+        { color:'purple', icon:'<circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>', title:'Why this is worth trying',
+          bullets:['• General advice is often not enough. Your child needs an individualized assessment.', '• Without a plan, it is hard to know what truly helps']},
+        { color:'teal', icon:'<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>', title:'How to start',
+          steps:['Ask your pediatrician for a referral to an occupational therapist', 'Try <strong>Mümkindik</strong> center or <strong>BrainChild Clinic</strong>', 'Bring notes about the last 3 to 5 difficult situations to the first appointment']},
+        { color:'blue', icon:'<path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/>', title:'What to ask the specialist',
+          bullets:['• “Do you use the Ayres Sensory Integration approach?”', '• “Can we get a sensory plan for home?”']}
+      ]
+    },
+    followup: 'Has Alan already been assessed by an occupational therapist, or would this be the first time?'
+  }
+};
+
+/* ── Send ── */
+function renderResponse(r, box, wrap, elapsed) {
+  const iconMap = {
+    purple: '<circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>',
+    teal:   '<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>',
+    blue:   '<path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/>',
+    amber:  '<path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>',
+    red:    '<circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>'
+  };
+
+  if (r.detect) {
+    const dc = document.createElement('div');
+    dc.className = 'detect-card';
+    dc.innerHTML = `<div class="detect-icon"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg></div><div><div class="detect-label">Observed</div><div class="detect-value">${r.detect}</div></div>`;
+    box.appendChild(dc);
+  }
+
+  const aRow = document.createElement('div');
+  aRow.className = 'msg-row';
+  aRow.innerHTML = avHtml() + `<div class="bubble ai">${r.intro}</div>`;
+  box.appendChild(aRow);
+  const aMeta = document.createElement('div');
+  aMeta.className = 'msg-meta';
+  aMeta.innerHTML = `<span class="msg-meta-time">${time()}</span>${elapsed ? `<span class="msg-meta-dur">· ${elapsed}s</span>` : ''}`;
+  box.appendChild(aMeta);
+
+  let delay = 200;
+
+  if (r.sections && r.sections.length) {
+    setTimeout(() => {
+      const card = document.createElement('div');
+      card.className = 'response-card';
+      r.sections.forEach(sec => {
+        const s = document.createElement('div');
+        s.className = 'rc-section';
+        const icon = iconMap[sec.color] || iconMap.purple;
+        let html = `<div class="rc-section-head"><div class="rc-section-icon icon-${sec.color}"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round">${icon}</svg></div><div class="rc-section-title">${sec.title}</div></div>`;
+        if (sec.type === 'steps') {
+          html += `<div class="rc-steps">` + sec.items.map((st,i) => `<div class="rc-step"><div class="rc-step-num">${i+1}</div><div class="rc-step-text">${st}</div></div>`).join('') + `</div>`;
+        } else {
+          html += `<div class="rc-bullets">` + sec.items.map(b => `<div class="rc-bullet">${b}</div>`).join('') + `</div>`;
+        }
+        s.innerHTML = html;
+        card.appendChild(s);
+      });
+      box.appendChild(card);
+      wrap.scrollTop = 99999;
+    }, delay); delay += 200;
+  }
+
+  if (r.followup) {
+    setTimeout(() => {
+      const fq = document.createElement('div');
+      fq.className = 'followup-bubble';
+      fq.textContent = r.followup;
+      box.appendChild(fq);
+      wrap.scrollTop = 99999;
+    }, delay); delay += 150;
+  }
+
+  setTimeout(() => {
+    const ar = document.createElement('div');
+    ar.className = 'action-row';
+    ar.innerHTML = `
+      <button class="feedback-btn helped" onclick="feedbackClick(this,'helped')">👍 Helped</button>
+      <button class="feedback-btn nope"   onclick="feedbackClick(this,'nope')">👎 Didn’t help</button>
+      <button class="copy-btn" onclick="copyCard(this)">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>Copy
+      </button>`;
+    box.appendChild(ar);
+    wrap.scrollTop = 99999;
+    setTimeout(saveMsgsDom, 100);
+  }, delay);
+}
+
+const STREAMING_LABELS = [
+  'Analyzing the situation…',
+  'Selecting recommendations…',
+  'Preparing the response…',
+  'Almost ready…'
+];
+
+async function send() {
+  const inp = document.getElementById('ci');
+  const box = document.getElementById('msgs');
+  const wrap = document.getElementById('msgs-wrap');
+  const txt = inp.value.trim();
+  if (!txt) return;
+  inp.value = '';
+  inp.disabled = true;
+  document.querySelector('.send-btn').disabled = true;
+
+  // User message
+  const uRow = document.createElement('div');
+  uRow.className = 'msg-row user';
+  uRow.innerHTML = `<div class="bubble user">${esc(txt)}</div>`;
+  box.appendChild(uRow);
+  const uMeta = document.createElement('div');
+  uMeta.className = 'msg-meta right';
+  uMeta.innerHTML = `<span class="msg-meta-time">${time()}</span><span class="msg-meta-check">✓✓</span>`;
+  box.appendChild(uMeta);
+  wrap.scrollTop = 99999;
+
+  // Streaming status bubble
+  const streamRow = document.createElement('div');
+  streamRow.className = 'msg-row';
+  streamRow.innerHTML = avHtml() + `<div class="bubble ai stream-bubble"><span class="stream-label">${STREAMING_LABELS[0]}</span><span class="stream-cursor">▋</span></div>`;
+  box.appendChild(streamRow);
+  wrap.scrollTop = 99999;
+
+  const streamBubble = streamRow.querySelector('.stream-bubble');
+  const streamLabel = streamRow.querySelector('.stream-label');
+
+  // Cycle through status labels while waiting
+  let labelIdx = 0;
+  const labelTimer = setInterval(() => {
+    labelIdx = (labelIdx + 1) % STREAMING_LABELS.length;
+    if (streamLabel) streamLabel.textContent = STREAMING_LABELS[labelIdx];
+  }, 1800);
+
+  chatHistory.push({ role: 'user', content: txt });
+  saveChatHistory();
+  const sendStartTime = Date.now();
+
+  try {
+    const GEMINI_KEY = '';
+    const MODELS_TO_TRY = [
+      'gemini-2.0-flash',
+      'gemini-2.5-flash',
+      'gemini-2.5-flash-lite',
+      'gemini-1.5-flash',
+      'gemini-1.5-flash-latest'
+    ];
+
+    const geminiMessages = chatHistory.map(m => ({
+      role: m.role === 'assistant' ? 'model' : 'user',
+      parts: [{ text: m.content }]
+    }));
+
+    const requestBody = JSON.stringify({
+      system_instruction: { parts: [{ text: getSystemPrompt() }] },
+      contents: geminiMessages,
+      generationConfig: {
+        temperature: 0.7,
+        maxOutputTokens: 3000,
+        responseMimeType: 'application/json'
+      }
+    });
+
+    // Try models with streaming
+    let fullText = '';
+    let success = false;
+    let lastError = '';
+
+    for (const GEMINI_MODEL of MODELS_TO_TRY) {
+      fullText = '';
+      try {
+        const response = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:streamGenerateContent?alt=sse&key=${GEMINI_KEY}`,
+          { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: requestBody }
+        );
+
+        if (!response.ok) {
+          const errData = await response.json();
+          lastError = errData.error?.message || `HTTP ${response.status}`;
+          continue;
+        }
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+
+          const lines = buffer.split('\n');
+          buffer = lines.pop();
+
+          for (const line of lines) {
+            if (!line.startsWith('data: ')) continue;
+            const jsonStr = line.slice(6).trim();
+            if (!jsonStr || jsonStr === '[DONE]') continue;
+            try {
+              const chunk = JSON.parse(jsonStr);
+              const chunkText = chunk.candidates?.[0]?.content?.parts?.[0]?.text || '';
+              fullText += chunkText;
+
+              // Show live character count so user sees progress
+              const chars = fullText.length;
+              if (streamLabel) streamLabel.textContent = chars < 200 ? STREAMING_LABELS[0] : chars < 600 ? STREAMING_LABELS[1] : chars < 1200 ? STREAMING_LABELS[2] : STREAMING_LABELS[3];
+              wrap.scrollTop = 99999;
+            } catch(e) {}
+          }
+        }
+
+        success = true;
+        break;
+      } catch(fetchErr) {
+        lastError = fetchErr.message;
+      }
+    }
+
+    if (!success) throw new Error(lastError);
+
+    clearInterval(labelTimer);
+
+    // Parse JSON robustly
+    let clean = fullText.replace(/```json|```/g, '').trim();
+    let r;
+    try {
+      r = JSON.parse(clean);
+    } catch(parseErr) {
+      const lastBrace = clean.lastIndexOf('}');
+      if (lastBrace > 0) {
+        let attempt = clean.substring(0, lastBrace + 1);
+        const opens = (attempt.match(/\[/g)||[]).length - (attempt.match(/\]/g)||[]).length;
+        const objOpens = (attempt.match(/\{/g)||[]).length - (attempt.match(/\}/g)||[]).length;
+        for(let i=0;i<opens;i++) attempt += ']';
+        for(let i=0;i<objOpens;i++) attempt += '}';
+        r = JSON.parse(attempt);
+      } else {
+        throw parseErr;
+      }
+    }
+
+    chatHistory.push({ role: 'assistant', content: fullText });
+    saveChatHistory();
+    updateRecommendationProfileFromChat();
+
+    // Smooth fade out stream bubble, then render
+    streamRow.style.transition = 'opacity 0.2s';
+    streamRow.style.opacity = '0';
+    setTimeout(() => {
+      streamRow.remove();
+      const elapsed = ((Date.now() - sendStartTime) / 1000).toFixed(1);
+      renderResponse(r, box, wrap, elapsed);
+    }, 200);
+
+  } catch (err) {
+    clearInterval(labelTimer);
+    streamRow.remove();
+    console.error('Gemini error:', err);
+
+    const errRow = document.createElement('div');
+    errRow.className = 'msg-row';
+    errRow.innerHTML = avHtml() + `<div class="bubble ai" style="border-color:#FECACA;color:#991B1B;font-size:11.5px">⚠️ API error: ${err.message}. Fallback mode is being used.</div>`;
+    box.appendChild(errRow);
+    wrap.scrollTop = 99999;
+
+    // Fallback to keyword response
+    const lc = txt.toLowerCase();
+    let key = 'default';
+    if (lc.match(/сенсор|перегруз|истерик|наушник|шум|крик|громк|звук|свет|кричит/)) key = 'sensory';
+    else if (lc.match(/сон|спит|усталост|ночь|просыпает|не засыпает|вялый|капризн/)) key = 'sleep';
+    else if (lc.match(/аба|aba|поведен|терапи|бьёт|кусает|царапает|агресс/)) key = 'aba';
+    else if (lc.match(/эргOTерапевт|specialist|найти|врач|центр/)) key = 'ot';
+    else if (lc.match(/не ест|еда|кушает|питание|аппетит/)) key = 'food';
+    else if (lc.match(/сад|школ|воспитател|учитель|занят/)) key = 'school';
+
+    const fb = RESP[key];
+    const fallback = {
+      detect: fb.detect,
+      intro: fb.intro,
+      sections: fb.card ? fb.card.sections.map(s => ({
+        color: s.color, title: s.title,
+        type: s.steps ? 'steps' : 'bullets',
+        items: s.steps || s.bullets
+      })) : null,
+      followup: fb.followup
+    };
+    renderResponse(fallback, box, wrap);
+  } finally {
+    inp.disabled = false;
+    document.querySelector('.send-btn').disabled = false;
+    inp.focus();
+  }
+}
+/* ── In-app Article Viewer ── */
+function openArticle(url, title) {
+  const overlay = document.getElementById('article-overlay');
+  const iframe  = document.getElementById('article-iframe');
+  const loader  = document.getElementById('article-loader');
+  const titleEl = document.getElementById('article-topbar-title');
+  titleEl.textContent = title || '';
+  iframe.className = 'article-iframe';
+  loader.classList.remove('hidden');
+  iframe.src = url;
+  overlay.classList.add('open');
+}
+function closeArticle() {
+  const overlay = document.getElementById('article-overlay');
+  const iframe  = document.getElementById('article-iframe');
+  overlay.classList.remove('open');
+  iframe.src = '';
+  iframe.className = 'article-iframe';
+}
+function hideArticleLoader() {
+  const loader = document.getElementById('article-loader');
+  const iframe = document.getElementById('article-iframe');
+  loader.classList.add('hidden');
+  iframe.classList.add('loaded');
+}
+</script>
